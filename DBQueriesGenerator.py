@@ -3,8 +3,10 @@ import os
 
 def create_table(dataset, connector):
     query = []
-    for col in dataset.columns:
-        query.append(col + " text")
+    types = ['integer', 'integer', 'integer', 'integer', 'integer', 'decimal', 'decimal', 'decimal', 'char(1)',
+             'char(1)', 'date', 'date', 'date', 'text', 'text', 'text', 'text']
+    for (col, type) in zip(dataset.columns, types):
+        query.append(col + " " + type)
     connector.query("CREATE TABLE " + os.environ['TABLENAME'] + "(" + ",".join(query) + ");")
     for index, row in dataset.iterrows():
         vals = []
@@ -41,7 +43,7 @@ def drop_indexes(connector):
                     " FROM   pg_index  i"
                     " LEFT   JOIN pg_depend d ON d.objid = i.indexrelid"
                     " AND d.deptype = 'i'"
-                    " WHERE  i.indrelid = 'test_data'::regclass"
+                    " WHERE  i.indrelid = '" + os.environ['TABLENAME'] + "'::regclass"
                     " AND    d.objid IS NULL"
                     ";").fetchone()[0])
     connector.commit()
