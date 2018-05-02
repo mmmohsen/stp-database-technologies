@@ -9,7 +9,7 @@ class PostgresConnector(object):
     def __new__(cls):
         if cls._instance is None:
             cls._instance = object.__new__(cls)
-            db_config = {'dbname': 'test', 'host': 'localhost',
+            db_config = {'dbname':  os.environ['DBNAME'], 'host': 'localhost',
                      'password': os.environ['PASSWORD'], 'port': os.environ['PORT'], 'user': os.environ['USER']}
             try:
                 print('connecting to PostgreSQL database...')
@@ -39,6 +39,9 @@ class PostgresConnector(object):
             return None
         else:
             return self.cursor
+
+    def commit(self):
+        self.connection.commit()
 
     def __del__(self):
         self.connection.close()
