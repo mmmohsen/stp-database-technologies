@@ -9,8 +9,8 @@ class PostgresConnector(object):
     def __new__(cls):
         if cls._instance is None:
             cls._instance = object.__new__(cls)
-            db_config = {'dbname':  os.environ['DBNAME'], 'host': 'localhost',
-                     'password': os.environ['PASSWORD'], 'port': os.environ['PORT'], 'user': os.environ['USER']}
+            db_config = {'dbname': os.environ['DBNAME'], 'host': 'localhost',
+                         'password': os.environ['PASSWORD'], 'port': os.environ['PORT'], 'user': os.environ['USER']}
             try:
                 print('connecting to PostgreSQL database...')
                 connection = PostgresConnector._instance.connection = psycopg2.connect(**db_config)
@@ -19,8 +19,7 @@ class PostgresConnector(object):
                 db_version = cursor.fetchone()
 
             except Exception as error:
-                print('Error: connection not established {}'.format(error))
-                PostgresConnector._instance = None
+                raise Exception(error, 'Error: connection not established')
 
             else:
                 print('connection established\n{}'.format(db_version[0]))
@@ -44,5 +43,7 @@ class PostgresConnector(object):
         self.connection.commit()
 
     def __del__(self):
-        self.connection.close()
-        self.cursor.close()
+        if hasattr(self, "connection"):
+            self.connection.close()
+        if hasattr(self, "cursor"):
+            self.cursor.close()
