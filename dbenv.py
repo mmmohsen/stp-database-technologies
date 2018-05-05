@@ -55,6 +55,9 @@ class DatabaseIndexesEnv(gym.Env):
         self.old_cost = new_cost
         return self.state, reward, self.episode >= self.k, {}
 
+    def set_query_batch(self, query_batch):
+        self.query_batch = query_batch
+
     def _get_execution_time_for_batch(self):
         return sum(
             (get_execution_time(self.connector, query.build_query(self.table_name)) for query in self.query_batch))

@@ -49,9 +49,9 @@ class Query(object):
 
     def build_query(self, table_name):
         where_clause = "WHERE " + " AND ".join(
-            ["{0}>={1} AND {0}<={2}".format(column_name, left_bound, right_bound)
+            ["{0} >= {1} AND {0} <= {2}".format(column_name, left_bound, right_bound)
              for (column_name, (left_bound, right_bound))
              in filter(lambda x: x[1], zip(self.table_column_names, self.bounds))
              ]
         )
-        return "SELECT * FROM {} ".format(table_name) + where_clause
+        return "SELECT * FROM {} ".format(table_name) + where_clause + ";"

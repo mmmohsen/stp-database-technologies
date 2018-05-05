@@ -1,6 +1,6 @@
 import os
 
-os.environ['DBNAME'] = "bullshift"
+os.environ['DBNAME'] = ""
 os.environ['PASSWORD'] = ""
 os.environ['USER'] = ""
 os.environ["FILENAME"] = ""
