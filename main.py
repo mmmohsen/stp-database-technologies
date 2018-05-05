@@ -15,7 +15,8 @@ table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'de
                       'char(1)', 'date', 'date', 'date', 'text', 'text', 'text', 'text']
 table_column_names = list(['column' + str(x) for x in range(17)])
 
-
+ALPHA = 1.0
+GAMMA = 0.8
 def main():
     """
     Entry point. Remember to configure DBNAME, USER, PASSWORD, PORT, TABLENAME and FILENAME environment variables.
