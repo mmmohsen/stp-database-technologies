@@ -30,7 +30,6 @@ class DatabaseIndexesEnv(gym.Env):
         self.connector = connector
         self.k = k
         self.step_number = 0
-        drop_indexes(connector, table_name)
         self.cache = {}
         # self.old_cost = self._get_execution_time_for_batch()
 
@@ -71,8 +70,11 @@ class DatabaseIndexesEnv(gym.Env):
             (get_execution_time(self.connector, query.build_query(self.table_name)) for query in self.query_batch))
 
     def _key_for_state_query(self):
-        return reduce(lambda prev, x: prev * 2 + (1 if x else 0), self.state, 1), str(
-            list([str(x) for x in self.query_batch]))
+        return state_to_int(self.state), str(list([str(x) for x in self.query_batch]))
+
+
+def state_to_int(state):
+    return reduce(lambda prev, x: prev * 2 + (1 if x else 0), state, 0)
 
 
 class Dynamic(gym.Space):

@@ -10,6 +10,7 @@ from gym.envs import register
 from PostgresConnector import PostgresConnector
 from db import create_table, table_exists, create_table_2, load_table
 # change this config for different data types
+from dbenv import state_to_int
 from query import generate_query
 
 table_name = os.environ["TABLENAME"]
@@ -25,7 +26,7 @@ exploration_rate = 1.0  # represents the exploration rate to be decayed by the t
 num_actions = 3
 num_queries_batch = 5
 
-"""
+""" 
 we want to convert the state from the list representation to be 
 a string of indices, to serve as a key for the q table.
 """
@@ -52,10 +53,10 @@ WAAAAAAAAAAARNING Buggggggs a heads
 
 
 def is_new_state(state):
-    string_state = state_to_string(state)
-    if string_state not in Q_table:
+    int_state = state_to_int(state)
+    if int_state not in Q_table:
         return True
-    actions_rewards_dict = Q_table[string_state]
+    actions_rewards_dict = Q_table[int_state]
     return not bool(actions_rewards_dict)
 
 
@@ -65,10 +66,10 @@ returns the action causes the maximum reward and the reward corresponding to tha
 
 
 def get_action_maximum_reward(state):
-    #    assert Q_table[state_to_string(state)], "This state has no corresponding action: %r" % state_to_string(state)
+    # assert Q_table[state_to_int(state)], "This state has no corresponding action: %r" % state_to_int(state)
     max_reward = float('-inf')
-    string_state = state_to_string(state)
-    actions_rewards_dict = Q_table[string_state]
+    int_state = state_to_int(state)
+    actions_rewards_dict = Q_table[int_state]
     for key, val in actions_rewards_dict.items():
         if val > max_reward:
             max_reward = val
@@ -104,19 +105,23 @@ def run_qlearning():
         # query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
         # env.set_query_batch(query_batch)
         episode_total_reward = 0
+        episode_strategy = []
         ## now the learning comes
 
         for _ in range(3):
             # do exploration, i.e., choose a random actions
             if is_new_state(state) or np.random.uniform(0, 1) < eps:
+                episode_strategy.append("explore")
                 action = env.action_space.sample()
-                Q_table[state_to_string(state)] = {}
-                Q_table[state_to_string(state)][action] = 0
+                if is_new_state(state):
+                    Q_table[state_to_int(state)] = {}
+                Q_table[state_to_int(state)][action] = 0
             else:
                 # else exploit choose the maximum value from the Q table
+                episode_strategy.append("exploit")
                 action = get_action_maximum_reward(state)[0]
             actions_taken.append(action)
-            state_old_string = state_to_string(state)
+            state_old_int = state_to_int(state)
             state_new, reward, done, _ = env.step(action)
             episode_total_reward += reward
             next_action = 0
@@ -129,12 +134,14 @@ def run_qlearning():
 
             else:
                 next_action, next_action_q_value = get_action_maximum_reward(state_new)
-            Q_table[state_old_string][action] += ALPHA * (reward + GAMMA * next_action_q_value -
-                                                          Q_table[state_old_string][action])
+            Q_table[state_old_int][action] += ALPHA * (reward + GAMMA * next_action_q_value -
+                                                       Q_table[state_old_int][action])
             state, action = state_new, next_action
         actions_taken_s = ','.join(str(e) for e in actions_taken)
-        print("episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}'"
-              .format(float(episode), float(episode_total_reward), state_to_string(state), actions_taken_s))
+        print(
+            "episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}', strategy = {4}"
+                .format(float(episode), float(episode_total_reward), state_to_string(state), actions_taken_s,
+                        episode_strategy))
 
 
 def main():
