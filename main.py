@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import os_params_values
 from gym.envs import register
-#from typing import Dict, Any
+# from typing import Dict, Any
 
 from PostgresConnector import PostgresConnector
 from db import create_table, table_exists, create_table_2, load_table
@@ -19,9 +19,9 @@ table_column_names = list(['column' + str(x) for x in range(17)])
 
 Q_table = {}  # type: Dict[Any, Any]
 NUM_EPISODES = 100
-GAMMA = 0.9 # the cummulative reward, how much the future reward matters
-ALPHA = 0.01 # the learning rate
-exploration_rate = 1.0 # represents the exploration rate to be decayed by the time
+GAMMA = 0.9  # the cummulative reward, how much the future reward matters
+ALPHA = 0.01  # the learning rate
+exploration_rate = 1.0  # represents the exploration rate to be decayed by the time
 num_actions = 3
 num_queries_batch = 5
 
@@ -30,9 +30,9 @@ we want to convert the state from the list representation to be
 a string of indices, to serve as a key for the q table.
 """
 
+
 def state_to_string(state):
     return ''.join(str(int(e)) for e in state)
-
 
 
 """
@@ -50,6 +50,7 @@ WAAAAAAAAAAARNING Buggggggs a heads
 
 """
 
+
 def is_new_state(state):
     string_state = state_to_string(state)
     if string_state not in Q_table:
@@ -57,11 +58,14 @@ def is_new_state(state):
     actions_rewards_dict = Q_table[string_state]
     return not bool(actions_rewards_dict)
 
+
 """
 returns the action causes the maximum reward and the reward corresponding to that action
 """
+
+
 def get_action_maximum_reward(state):
-#    assert Q_table[state_to_string(state)], "This state has no corresponding action: %r" % state_to_string(state)
+    #    assert Q_table[state_to_string(state)], "This state has no corresponding action: %r" % state_to_string(state)
     max_reward = float('-inf')
     string_state = state_to_string(state)
     actions_rewards_dict = Q_table[string_state]
@@ -97,14 +101,14 @@ def run_qlearning():
         # decay the exploration as the number of episodes grows, the Q table becomes more mature
         eps = exploration_rate / np.sqrt(episode + 1)
         # get batch of 5 queries, update the corresponding query batch of the environment
-        query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
-        env.set_query_batch(query_batch)
+        # query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
+        # env.set_query_batch(query_batch)
         episode_total_reward = 0
         ## now the learning comes
 
         for _ in range(3):
             # do exploration, i.e., choose a random actions
-            if is_new_state(state) or np.random.uniform(0, 1) < eps  :
+            if is_new_state(state) or np.random.uniform(0, 1) < eps:
                 action = env.action_space.sample()
                 Q_table[state_to_string(state)] = {}
                 Q_table[state_to_string(state)][action] = 0
@@ -126,18 +130,16 @@ def run_qlearning():
             else:
                 next_action, next_action_q_value = get_action_maximum_reward(state_new)
             Q_table[state_old_string][action] += ALPHA * (reward + GAMMA * next_action_q_value -
-                                                                Q_table[state_old_string][action])
+                                                          Q_table[state_old_string][action])
             state, action = state_new, next_action
         actions_taken_s = ','.join(str(e) for e in actions_taken)
         print("episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}'"
-              .format( float(episode) , float(episode_total_reward), state_to_string(state), actions_taken_s))
-
-
+              .format(float(episode), float(episode_total_reward), state_to_string(state), actions_taken_s))
 
 
 def main():
-
     run_qlearning()
+
 
 if __name__ == "__main__":
     main()

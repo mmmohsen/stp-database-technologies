@@ -34,8 +34,7 @@ class PostgresConnector(object):
         try:
             self.cursor.execute(query)
         except Exception as error:
-            print('error execting query "{}", error: {}'.format(query, error))
-            return None
+            raise Exception(error, "Error while executing query")
         else:
             return self.cursor
 
