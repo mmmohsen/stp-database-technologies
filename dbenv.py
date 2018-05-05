@@ -23,7 +23,7 @@ class DatabaseIndexesEnv(gym.Env):
         """
         super(DatabaseIndexesEnv, self).__init__()
         self.action_space = Dynamic(n)
-        self.observation_space = spaces.Tuple([spaces.Discrete(2) for _ in range(n)])
+        self.observation_space = spaces.MultiBinary(n)
         self.state = list(False for _ in range(n))
         self.table_name = table_name
         self.query_batch = query_batch
@@ -46,6 +46,7 @@ class DatabaseIndexesEnv(gym.Env):
         super(DatabaseIndexesEnv, self).render(mode)
 
     def step(self, action):
+        assert action in self.action_space.available_actions
         self.step_number += 1
         self.state[action] = True
         self.action_space.disable_actions((action,))
