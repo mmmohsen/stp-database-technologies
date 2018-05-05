@@ -46,22 +46,27 @@ class DatabaseIndexesEnv(gym.Env):
         super(DatabaseIndexesEnv, self).render(mode)
 
     def step(self, action):
-        assert action in self.action_space.available_actions
+        assert action in self.action_space.available_actions or action == -1
         self.step_number += 1
-        self.state[action] = True
-        self.action_space.disable_actions((action,))
-        cached = None
-        try:
-            cached = self.cache[self._key_for_state_query()]
-        except KeyError:
-            pass
-        cost = cached
-        if not cached:
-            add_index(self.connector, action, self.table_name)
-            cost = self._get_execution_time_for_batch()
-            self.cache[self._key_for_state_query()] = cost
-        reward = -cost
-        return self.state, reward, self.step_number >= self.k, {}
+        if action != -1:
+            self.state[action] = True
+            self.action_space.disable_actions((action,))
+            cached = None
+            try:
+                cached = self.cache[self._key_for_state_query()]
+            except KeyError:
+                pass
+            cost = cached
+            if not cached:
+                add_index(self.connector, action, self.table_name)
+                cost = self._get_execution_time_for_batch()
+                self.cache[self._key_for_state_query()] = cost
+            reward = -cost
+            done = self.step_number >= self.k
+        else:
+            reward = float('-inf')
+            done = True
+        return self.state, reward, done, {}
 
     def set_query_batch(self, query_batch):
         self.query_batch = query_batch

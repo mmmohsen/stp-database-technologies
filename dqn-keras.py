@@ -17,10 +17,18 @@ from PostgresConnector import PostgresConnector
 from query import generate_query
 from rl.processors import Processor
 
+
 class CustomProcessor(Processor):
-    def process_state_batch(self, batch):
-        #Here we should filter out from the batch the action that are not valid...
-        return batch
+    def __init__(self, action_space):
+        self.action_space = action_space
+
+    def process_action(self, action):
+        # Here we should filter out from the batch the action that are not valid...
+        if self.action_space.contains(action):
+            return action
+        else:
+            return -1
+
 
 table_name = os.environ["TABLENAME"]
 table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'decimal', 'decimal', 'decimal', 'char(1)',
@@ -61,7 +69,7 @@ print(model.summary())
 memory = SequentialMemory(limit=1000, window_length=1)
 policy = BoltzmannQPolicy()
 dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_steps_warmup=10,
-               target_model_update=1e-2, policy=policy, processor=CustomProcessor())
+               target_model_update=1e-2, policy=policy, processor=CustomProcessor(env.action_space))
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
 # Okay, now it's time to learn something! We visualize the training here for show, but this

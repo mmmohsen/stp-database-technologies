@@ -6,12 +6,22 @@ from keras.layers import Dense, Activation, Flatten
 from keras.optimizers import Adam
 
 from rl.agents.dqn import DQNAgent
+from rl.core import Processor
 from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
 
 ENV_NAME = 'CartPole-v0'
 
+class CustomProcessor(Processor):
+    def __init__(self, action_space):
+
+    def process_action(self, action):
+        #Here we should filter out from the batch the action that are not valid...
+        print "############################################"
+        print action
+        print "############################################"
+        return action
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
@@ -34,14 +44,14 @@ print(model.summary())
 # even the metrics!
 memory = SequentialMemory(limit=1000, window_length=1)
 policy = BoltzmannQPolicy()
-dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=10,
+dqn = DQNAgent(processor=CustomProcessor(), model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=10,
                target_model_update=1e-2, policy=policy)
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
 # Okay, now it's time to learn something! We visualize the training here for show, but this
 # slows down training quite a lot. You can always safely abort the training prematurely using
 # Ctrl + C.
-dqn.fit(env, nb_steps=5000, visualize=True, verbose=1)
+dqn.fit(env, nb_steps=1000, visualize=True, verbose=1)
 
 # After training is done, we save the final weights.
 dqn.save_weights('dqn_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
