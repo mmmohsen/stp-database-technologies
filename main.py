@@ -25,6 +25,8 @@ ALPHA = 0.01  # the learning rate
 exploration_rate = 1.0  # represents the exploration rate to be decayed by the time
 num_actions = 3
 num_queries_batch = 5
+min_exp_rate = 0.01
+
 
 """ 
 we want to convert the state from the list representation to be 
@@ -101,6 +103,7 @@ def run_qlearning():
         actions_taken = list()
         # decay the exploration as the number of episodes grows, the Q table becomes more mature
         eps = exploration_rate / np.sqrt(episode + 1)
+        eps = min(eps, min_exp_rate)
         # get batch of 5 queries, update the corresponding query batch of the environment
         # query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
         # env.set_query_batch(query_batch)
@@ -110,6 +113,7 @@ def run_qlearning():
 
         for _ in range(3):
             # do exploration, i.e., choose a random actions
+
             if is_new_state(state) or np.random.uniform(0, 1) < eps:
                 episode_strategy.append("explore")
                 action = env.action_space.sample()
