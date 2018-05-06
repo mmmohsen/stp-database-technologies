@@ -103,7 +103,7 @@ def run_qlearning():
         actions_taken = list()
         # decay the exploration as the number of episodes grows, the Q table becomes more mature
         eps = exploration_rate / np.sqrt(episode + 1)
-        eps = min(eps, min_exp_rate)
+        eps = max(eps, min_exp_rate)
         # get batch of 5 queries, update the corresponding query batch of the environment
         # query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
         # env.set_query_batch(query_batch)
