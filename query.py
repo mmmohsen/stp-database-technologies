@@ -1,57 +1,85 @@
+import random
+
 import numpy as np
+
+from db import get_min_value, get_max_value
 
 POSTGRES_MAX_INT = 2147483647
 POSTGRES_MIN_INT = -2147483648
 
 
-def generate_query(table_column_names, table_column_types):
+def generate_query(selected_columns_amount, participating_columns, table_name, connector, total_columns_amount):
     """
-    Creates a workload with 5 queries.
-    -> Selects number of columns to be used in query randomly
+    Generates random range query for the column amount given.
     -> selects the column to be used in query randomly
     -> selects the predicated for every column in a query randomly
     -> select the data value of column randomly
-    > Parameters:
-        table : str                 | Table on which query will be applied
-        dataset : pandas dataframe       | data to be inputed in table will be gathered from dataset
-    > Returns:
-        workload_queries: list          | list containing 5 queries for the particular workload
-        columns_in_workload: set        | set containing columns used in workload
     """
-    integer_columns = tuple(filter(lambda it: it[1][1] in ("integer", "INTEGER"),
-                                      enumerate(zip(table_column_names, table_column_types))))
-    # loop over 5 times to have 5 queries in workload
-    # Selects number of columns to be used in query randomly
-    number_of_cols = np.random.randint(1, len(integer_columns) + 1)
-    columns_to_query = tuple(integer_columns[i] for i in (np.random.choice(len(integer_columns), number_of_cols, replace=False)))
+    idxs = np.random.choice(len(participating_columns), selected_columns_amount, replace=False)
+    participating_columns = np.array(participating_columns)
+    columns_to_query = [Column(column) for column in participating_columns[idxs]]
+    query = Query(table_name, connector, total_columns_amount)
+    for column in columns_to_query:
+        min_value = get_min_value(connector, table_name, column.name)
+        max_value = get_max_value(connector, table_name, column.name)
+        if column.type == 'integer':
+            bounds = np.random.randint(min_value, max_value, 2)
+        else:
+            min_date = np.datetime64(min_value)
+            max_date = np.datetime64(max_value)
+            bounds = random_date(min_date, max_date), random_date(min_date, max_date)
+        column.set_bounds(bounds)
+        query.add_column(column)
+    return query.generate_query_row()
 
-    query = Query(table_column_names, table_column_types)
-    # loop over all the columns to be used in query
-    for (index, _) in columns_to_query:
-        # selects the predicated for every column in a query randomly
-        # if col in ['column8', 'column9', 'column13', 'column14', 'column15', 'column16']:
-        #    pred = np.random.choice(['LIKE', 'NOT LIKE'])
-        # else:
-        #    pred = np.random.choice(["=", ">", ">=", "<", "<="])
-        # select the data value of column randomly
-        bounds = np.random.randint(POSTGRES_MIN_INT, POSTGRES_MAX_INT, 2)
-        query.bounds[index] = (min(bounds), max(bounds))
-    return query
+
+def random_date(start, end):
+    """Generate a random datetime between `start` and `end`"""
+    return start + np.random.choice(np.arange(0, end - start))
 
 
 class Query(object):
-    def __init__(self, table_column_names, table_column_types, bounds=None):
-        self.table_column_types = table_column_types
-        self.table_column_names = table_column_names
-        self.bounds = bounds
-        if not bounds:
-            self.bounds = list(None for _ in range(len(table_column_names)))
+    def __init__(self, table_name, connector, total_columns_amount):
+        self.columns = []
+        self.table_name = table_name
+        self.connector = connector
+        self.sf_array = []
+        self.total_columns_amount = total_columns_amount
 
-    def build_query(self, table_name):
+    def add_column(self, column):
+        self.columns.append(column)
+
+    def build_query(self):
         where_clause = "WHERE " + " AND ".join(
-            ["{0} >= {1} AND {0} <= {2}".format(column_name, left_bound, right_bound)
-             for (column_name, (left_bound, right_bound))
-             in filter(lambda x: x[1], zip(self.table_column_names, self.bounds))
-             ]
+            ["{0} >= {1} AND {0} <= {2}".format(column.name, column.bounds[0], column.bounds[1])
+             for column in self.columns]
         )
-        return "SELECT * FROM {} ".format(table_name) + where_clause + ";"
+        return "SELECT * FROM {} ".format(self.table_name) + where_clause + ";"
+
+    def generate_query_row(self):
+        """generates query with SF for each column selected"""
+        total_amount_of_rows = self.connector.query("select count (*) from " + self.table_name + ";").fetchone()[0]
+        count_query_for_column = "select count (*) from " + self.table_name + " where {0} >= {1} AND {0} <= {2};"
+        for i in range(self.total_columns_amount):
+            column_participating = list(filter(lambda column: column.index == i, self.columns))
+            if column_participating:
+                rows_selected = count_query_for_column.format(column_participating[0].name,
+                                                              column_participating[0].bounds[0],
+                                                              column_participating[0].bounds[1])
+                self.sf_array.append(self.connector.query(rows_selected).fetchone()[0] / total_amount_of_rows)
+            else:
+                self.sf_array.append(1)
+
+        return {'query': self.build_query(), 'sf_array': self.sf_array}
+
+
+class Column(object):
+    def __init__(self, received_column):
+        self.name = received_column[0]
+        self.type = received_column[1]
+        self.index = int(received_column[2])
+        self.bounds = None
+
+    def set_bounds(self, bounds):
+        self.bounds = (min(bounds), max(bounds)) if self.type == 'integer' else (
+        "'" + str(min(bounds)) + "'", "'" + str(max(bounds)) + "'")

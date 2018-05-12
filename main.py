@@ -3,7 +3,7 @@ import os
 import gym
 import numpy as np
 import pandas as pd
-import os_params_values
+# import os_params_values
 from gym.envs import register
 # from typing import Dict, Any
 
@@ -11,12 +11,15 @@ from PostgresConnector import PostgresConnector
 from db import create_table, table_exists, create_table_2, load_table
 # change this config for different data types
 from dbenv import state_to_int
-from query import generate_query
+from queryPull import generate_query_pull
 
 table_name = os.environ["TABLENAME"]
+COLUMNS_AMOUNT = 17
 table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'decimal', 'decimal', 'decimal', 'char(1)',
                       'char(1)', 'date', 'date', 'date', 'text', 'text', 'text', 'text']
-table_column_names = list(['column' + str(x) for x in range(17)])
+table_column_names = list(['column' + str(x) for x in range(COLUMNS_AMOUNT)])
+
+queries_amount = 10
 
 Q_table = {}  # type: Dict[Any, Any]
 NUM_EPISODES = 100
@@ -81,71 +84,72 @@ def get_action_maximum_reward(state):
 
 def run_qlearning():
     connector = PostgresConnector()
-    if not table_exists(connector, table_name):
-        create_table_2(connector)
-        load_table(connector)
-
-    #    make results repeatable
-    np.random.seed(123)
-    query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
-
+    query_pull = generate_query_pull('.query_pull', queries_amount, [4, 6], table_column_types, table_column_names,
+                                     table_name, connector)
+    # if not table_exists(connector, table_name):
+    #     create_table_2(connector)
+    #     load_table(connector)
+    #
+    #   # make results repeatable
+    # np.random.seed(123)
+    # query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
     # gym configuration
-    register(
-        id='DatabaseIndexesEnv-v0',
-        entry_point='dbenv:DatabaseIndexesEnv',
-        kwargs={'n': len(table_column_names), 'table_name': table_name, 'query_batch': query_batch,
-                'connector': connector, 'k': 3}
-    )
-
-    env = gym.make('DatabaseIndexesEnv-v0')
-    for episode in range(NUM_EPISODES):
-        state = env.reset()
-        actions_taken = list()
-        # decay the exploration as the number of episodes grows, the Q table becomes more mature
-        eps = exploration_rate / np.sqrt(episode + 1)
-        eps = max(eps, min_exp_rate)
-        # get batch of 5 queries, update the corresponding query batch of the environment
-        # query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
-        # env.set_query_batch(query_batch)
-        episode_total_reward = 0
-        episode_strategy = []
-        ## now the learning comes
-
-        for _ in range(3):
-            # do exploration, i.e., choose a random actions
-
-            if is_new_state(state) or np.random.uniform(0, 1) < eps:
-                episode_strategy.append("explore")
-                action = env.action_space.sample()
-                if is_new_state(state):
-                    Q_table[state_to_int(state)] = {}
-                Q_table[state_to_int(state)][action] = 0
-            else:
-                # else exploit choose the maximum value from the Q table
-                episode_strategy.append("exploit")
-                action = get_action_maximum_reward(state)[0]
-            actions_taken.append(action)
-            state_old_int = state_to_int(state)
-            state_new, reward, done, _ = env.step(action)
-            episode_total_reward += reward
-            next_action = 0
-            next_action_q_value = 0
-            if is_new_state(state_new):
-                next_action = env.action_space.sample()
-                while (action == next_action):
-                    next_action = env.action_space.sample()
-                next_action_q_value = 0
-
-            else:
-                next_action, next_action_q_value = get_action_maximum_reward(state_new)
-            Q_table[state_old_int][action] += ALPHA * (reward + GAMMA * next_action_q_value -
-                                                       Q_table[state_old_int][action])
-            state, action = state_new, next_action
-        actions_taken_s = ','.join(str(e) for e in actions_taken)
-        print(
-            "episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}', strategy = {4}"
-                .format(float(episode), float(episode_total_reward), state_to_string(state), actions_taken_s,
-                        episode_strategy))
+    # register(
+    #     id='DatabaseIndexesEnv-v0',
+    #     entry_point='dbenv:DatabaseIndexesEnv',
+    #     kwargs={'n': len(table_column_names), 'table_name': table_name, 'query_batch': query_batch,
+    #             'connector': connector, 'k': 3}
+    # )
+    #
+    # env = gym.make('DatabaseIndexesEnv-v0')
+    # for episode in range(NUM_EPISODES):
+    #     state = env.reset()
+    #     actions_taken = list()
+    #     # decay the exploration as the number of episodes grows, the Q table becomes more mature
+    #     eps = exploration_rate / np.sqrt(episode + 1)
+    #     eps = max(eps, min_exp_rate)
+    #     # get batch of 5 queries, update the corresponding query batch of the environment
+    #     # query_batch = list(generate_query(table_column_names, table_column_types) for _ in range(num_queries_batch))
+    #     # env.set_query_batch(query_batch)
+    #     episode_total_reward = 0
+    #     episode_strategy = []
+    #     ## now the learning comes
+    #
+    #     for _ in range(3):
+    #         # do exploration, i.e., choose a random actions
+    #
+    #         if is_new_state(state) or np.random.uniform(0, 1) < eps:
+    #             episode_strategy.append("explore")
+    #             action = env.action_space.sample()
+    #             if is_new_state(state):
+    #                 Q_table[state_to_int(state)] = {}
+    #             Q_table[state_to_int(state)][action] = 0
+    #         else:
+    #             # else exploit choose the maximum value from the Q table
+    #             episode_strategy.append("exploit")
+    #             action = get_action_maximum_reward(state)[0]
+    #         actions_taken.append(action)
+    #         state_old_int = state_to_int(state)
+    #         state_new, reward, done, _ = env.step(action)
+    #         episode_total_reward += reward
+    #         next_action = 0
+    #         next_action_q_value = 0
+    #         if is_new_state(state_new):
+    #             next_action = env.action_space.sample()
+    #             while (action == next_action):
+    #                 next_action = env.action_space.sample()
+    #             next_action_q_value = 0
+    #
+    #         else:
+    #             next_action, next_action_q_value = get_action_maximum_reward(state_new)
+    #         Q_table[state_old_int][action] += ALPHA * (reward + GAMMA * next_action_q_value -
+    #                                                    Q_table[state_old_int][action])
+    #         state, action = state_new, next_action
+    #     actions_taken_s = ','.join(str(e) for e in actions_taken)
+    #     print(
+    #         "episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}', strategy = {4}"
+    #             .format(float(episode), float(episode_total_reward), state_to_string(state), actions_taken_s,
+    #                     episode_strategy))
 
 
 def main():

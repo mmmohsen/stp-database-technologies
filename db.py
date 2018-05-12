@@ -83,3 +83,11 @@ def drop_indexes(connector, table_name):
     if fetchone_:
         connector.query(fetchone_)
         connector.commit()
+
+
+def get_min_value(connector, table_name, column):
+    return connector.query("SELECT MIN({0}) FROM {1};".format(column, table_name)).fetchone()[0]
+
+
+def get_max_value(connector, table_name, column):
+    return connector.query("SELECT MAX({0}) FROM {1};".format(column, table_name)).fetchone()[0]
