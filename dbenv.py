@@ -12,7 +12,7 @@ class DatabaseIndexesEnv(gym.Env):
     (e.g. taking actions, getting cost).
     """
 
-    def __init__(self, n, table_name, query_batch, connector, k=3):
+    def __init__(self, n, table_name, query_pull, connector, k=3):
         """
         Constructs new env.
         :param n: number of columns
@@ -23,10 +23,11 @@ class DatabaseIndexesEnv(gym.Env):
         """
         super(DatabaseIndexesEnv, self).__init__()
         self.action_space = Dynamic(n)
-        self.observation_space = spaces.MultiBinary(n)
+        self.observation_space = spaces.Tuple(spaces.MultiBinary)
         self.state = list(False for _ in range(n))
         self.table_name = table_name
-        self.query_batch = query_batch
+        self.query_pull = query_pull
+        self.query_batch = np.random.choice(query_pull, n)
         self.connector = connector
         self.k = k
         self.step_number = 0
