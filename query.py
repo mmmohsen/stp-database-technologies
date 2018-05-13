@@ -8,7 +8,8 @@ POSTGRES_MAX_INT = 2147483647
 POSTGRES_MIN_INT = -2147483648
 
 
-def generate_query(selected_columns_amount, participating_columns, table_name, connector, total_columns_amount):
+def generate_query(selected_columns_amount, participating_columns, table_name, connector, total_columns_amount,
+                   total_amount_of_rows=None):
     """
     Generates random range query for the column amount given.
     -> selects the column to be used in query randomly
@@ -30,7 +31,7 @@ def generate_query(selected_columns_amount, participating_columns, table_name, c
             bounds = random_date(min_date, max_date), random_date(min_date, max_date)
         column.set_bounds(bounds)
         query.add_column(column)
-    return query.generate_query_row()
+    return query.generate_query_row(total_amount_of_rows)
 
 
 def random_date(start, end):
@@ -56,9 +57,11 @@ class Query(object):
         )
         return "SELECT * FROM {} ".format(self.table_name) + where_clause + ";"
 
-    def generate_query_row(self):
+    def generate_query_row(self, total_amount_of_rows=None):
         """generates query with SF for each column selected"""
-        total_amount_of_rows = self.connector.query("select count (*) from " + self.table_name + ";").fetchone()[0]
+
+        if total_amount_of_rows == None:
+            total_amount_of_rows = self.connector.query("select count (*) from " + self.table_name + ";").fetchone()[0]
         count_query_for_column = "select count (*) from " + self.table_name + " where {0} >= {1} AND {0} <= {2};"
         for i in range(self.total_columns_amount):
             column_participating = list(filter(lambda column: column.index == i, self.columns))
@@ -66,7 +69,8 @@ class Query(object):
                 rows_selected = count_query_for_column.format(column_participating[0].name,
                                                               column_participating[0].bounds[0],
                                                               column_participating[0].bounds[1])
-                self.sf_array.append(self.connector.query(rows_selected).fetchone()[0] / total_amount_of_rows)
+                self.sf_array.append(
+                    float(self.connector.query(rows_selected).fetchone()[0]) / float(total_amount_of_rows))
             else:
                 self.sf_array.append(1)
 
@@ -82,4 +86,4 @@ class Column(object):
 
     def set_bounds(self, bounds):
         self.bounds = (min(bounds), max(bounds)) if self.type == 'integer' else (
-        "'" + str(min(bounds)) + "'", "'" + str(max(bounds)) + "'")
+            "'" + str(min(bounds)) + "'", "'" + str(max(bounds)) + "'")

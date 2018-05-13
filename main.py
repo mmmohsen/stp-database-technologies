@@ -3,7 +3,7 @@ import os
 import gym
 import numpy as np
 import pandas as pd
-# import os_params_values
+import os_params_values
 from gym.envs import register
 # from typing import Dict, Any
 
@@ -19,7 +19,7 @@ table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'de
                       'char(1)', 'date', 'date', 'date', 'text', 'text', 'text', 'text']
 table_column_names = list(['column' + str(x) for x in range(COLUMNS_AMOUNT)])
 
-queries_amount = 10
+queries_amount = 1
 
 Q_table = {}  # type: Dict[Any, Any]
 NUM_EPISODES = 100
@@ -29,7 +29,6 @@ exploration_rate = 1.0  # represents the exploration rate to be decayed by the t
 num_actions = 3
 num_queries_batch = 5
 min_exp_rate = 0.01
-
 
 """ 
 we want to convert the state from the list representation to be 
@@ -85,7 +84,8 @@ def get_action_maximum_reward(state):
 def run_qlearning():
     connector = PostgresConnector()
     query_pull = generate_query_pull('.query_pull', queries_amount, [4, 6], table_column_types, table_column_names,
-                                     table_name, connector)
+                                     table_name, connector, first_run= True)
+    print query_pull
     # if not table_exists(connector, table_name):
     #     create_table_2(connector)
     #     load_table(connector)
