@@ -1,34 +1,17 @@
 import os
 
-import numpy as np
 import gym
+import numpy as np
 from gym.envs import register
-
-from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
+from keras.models import Sequential
 from keras.optimizers import Adam
-
 from rl.agents.dqn import DQNAgent
-from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
+from rl.policy import BoltzmannQPolicy
 
-import os_params_values
 from PostgresConnector import PostgresConnector
 from query import generate_query
-from rl.processors import Processor
-
-
-class CustomProcessor(Processor):
-    def __init__(self, action_space):
-        self.action_space = action_space
-
-    def process_action(self, action):
-        # Here we should filter out from the batch the action that are not valid...
-        if self.action_space.contains(action):
-            return action
-        else:
-            return -1
-
 
 table_name = os.environ["TABLENAME"]
 table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'decimal', 'decimal', 'decimal', 'char(1)',
@@ -69,7 +52,7 @@ print(model.summary())
 memory = SequentialMemory(limit=1000, window_length=1)
 policy = BoltzmannQPolicy()
 dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_steps_warmup=10,
-               target_model_update=1e-2, policy=policy, processor=CustomProcessor(env.action_space))
+               target_model_update=1e-2, policy=policy)
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
 # Okay, now it's time to learn something! We visualize the training here for show, but this

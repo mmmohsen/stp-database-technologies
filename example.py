@@ -13,16 +13,6 @@ from rl.memory import SequentialMemory
 
 ENV_NAME = 'CartPole-v0'
 
-class CustomProcessor(Processor):
-    def __init__(self, action_space):
-
-    def process_action(self, action):
-        #Here we should filter out from the batch the action that are not valid...
-        print "############################################"
-        print action
-        print "############################################"
-        return action
-
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
 np.random.seed(123)
@@ -44,7 +34,7 @@ print(model.summary())
 # even the metrics!
 memory = SequentialMemory(limit=1000, window_length=1)
 policy = BoltzmannQPolicy()
-dqn = DQNAgent(processor=CustomProcessor(), model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=10,
+dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=10,
                target_model_update=1e-2, policy=policy)
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
