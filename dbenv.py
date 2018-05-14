@@ -31,12 +31,11 @@ class DatabaseIndexesEnv(gym.Env):
         self.k = k
         self.step_number = 0
         self.cache = {}
-        # self.old_cost = self._get_execution_time_for_batch()
+        self.old_cost = self._get_execution_time_for_batch()
 
     def reset(self):
         self.step_number = 0
         drop_indexes(self.connector, self.table_name)
-        # self.old_cost = self._get_execution_time_for_batch()
         self.state = list(False for _ in range(len(self.state)))
         self.action_space = Dynamic(len(self.state))
         return self.state
@@ -57,20 +56,36 @@ class DatabaseIndexesEnv(gym.Env):
         cost = cached
         if not cached:
             add_index(self.connector, action, self.table_name)
-            cost = self._get_execution_time_for_batch()
+            cost = self._get_execution_time_for_batch_str()
             self.cache[self._key_for_state_query()] = cost
-        reward = -cost
+        reward = 1 / float(cost) * 10000
         return self.state, reward, self.step_number >= self.k, {}
 
     def set_query_batch(self, query_batch):
         self.query_batch = query_batch
 
+    def clear_cache(self):
+        self.cache = {}
+
     def _get_execution_time_for_batch(self):
         return sum(
             (get_execution_time(self.connector, query.build_query(self.table_name)) for query in self.query_batch))
 
+    def _get_execution_time_for_batch_str(self):
+        return sum(
+            (get_execution_time(self.connector, query) for query in self.query_batch))
+
     def _key_for_state_query(self):
         return state_to_int(self.state), str(list([str(x) for x in self.query_batch]))
+
+    def calc_old_cost(self, old_cost=None):
+        if old_cost != None:
+            self.old_cost = old_cost
+        else:
+            self.old_cost = self._get_execution_time_for_batch_str()
+
+    def get_old_cost(self):
+        return self._get_execution_time_for_batch_str()
 
 
 def state_to_int(state):

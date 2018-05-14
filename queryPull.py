@@ -16,9 +16,11 @@ def generate_query_pull(file_path, queries_amount, selected_columns_amount_range
                 random.randint(min(selected_columns_amount_range), max(selected_columns_amount_range)),
                 len(participating_columns))
             total_amount_of_rows = PostgresConnector().query("select count (*) from " + table_name + ";").fetchone()[0]
-            data = [generate_query(selected_columns_amount, participating_columns, table_name, connector,
-                                   len(table_column_names), total_amount_of_rows) for i in
-                    range(queries_amount)]
+            data = list()
+            for i in range(queries_amount):
+                data.append(generate_query(selected_columns_amount, participating_columns, table_name, connector,
+                                           len(table_column_names), total_amount_of_rows))
+                print ("generated query = '{0}'".format(i))
             with open(file_path, 'wb') as f:
                 pickle.dump(data, f)
     else:
