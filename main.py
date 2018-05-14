@@ -11,13 +11,10 @@ from PostgresConnector import PostgresConnector
 from db import create_table, table_exists, create_table_2, load_table
 # change this config for different data types
 from dbenv import state_to_int
+from const import table_column_types, table_column_names
 from queryPull import generate_query_pull
 
 table_name = os.environ["TABLENAME"]
-COLUMNS_AMOUNT = 17
-table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'decimal', 'decimal', 'decimal', 'char(1)',
-                      'char(1)', 'date', 'date', 'date', 'text', 'text', 'text', 'text']
-table_column_names = list(['column' + str(x) for x in range(COLUMNS_AMOUNT)])
 
 queries_amount = 10
 
