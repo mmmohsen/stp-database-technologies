@@ -195,7 +195,7 @@ def run_qlearning(query_pull, connector):
                 "episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}', strategy = {4}"
                     .format(episode, float(episode_total_reward), state_to_string(state), actions_taken_s,
                             episode_strategy))
-            with open("qlearn_log.txt", 'a') as myfile:
+            with open(os.environ["QLEARNINGLOG"], 'a') as myfile:
                 myfile.write(
                     "episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}', strategy = {4} \n"
                     .format(episode, float(episode_total_reward), state_to_string(state), actions_taken_s,
@@ -210,7 +210,7 @@ def run_qlearning(query_pull, connector):
         end = timer()
         print(end - start)
         # save features/labels to a csv file
-        with open("generated_data.csv", 'a') as myfile:
+        with open(os.environ["GENERATED_DATA"], 'a') as myfile:
             wr = csv.writer(myfile)
             wr.writerow(workload_selectivity + indices_arr)
 
@@ -220,7 +220,7 @@ def run_qlearning(query_pull, connector):
 # NOTE: xgboost doesn't support multi-labeled data
 # the solution is to use OneVsRest classifier
 def build_xgboost_model(test_size=0.33):
-    dataset = loadtxt('generated_data2.csv', delimiter=",")
+    dataset = loadtxt(os.environ["GENERATED_DATA"], delimiter=",")
     X = dataset[:, 0:COLUMNS_AMOUNT]
     Y = dataset[:, COLUMNS_AMOUNT:]
     seed = 7
@@ -255,7 +255,7 @@ def main():
     end = timer()
     print(end - start)
 
-    with open("over_all_log.txt", 'a') as myfile:
+    with open(os.environ["OVERALLLOG"], 'a') as myfile:
         myfile.write(
             "num of workloads = '{0}', num of episodes per workload = '{1}', qlearning total time in (ms) = '{2}' \n"
                 .format(num_workloads, NUM_EPISODES, end - start))
@@ -269,7 +269,7 @@ def main():
     accuracy = build_xgboost_model()['accuracy']
     end = timer()
 
-    with open("over_all_log.txt", 'a') as myfile:
+    with open(os.environ["OVERALLLOG"], 'a') as myfile:
         myfile.write(
             "accuarcy = '{0}', training time in (ms) = '{1}'\n"
                 .format(accuracy, end - start ))
