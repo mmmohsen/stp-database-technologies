@@ -81,7 +81,7 @@ def get_action_maximum_reward(state):
 
 def run_qlearning():
     connector = PostgresConnector()
-    query_pull = generate_query_pull('.query_pull', queries_amount, [4, 6], table_column_types, table_column_names,
+    generate_query_pull('.query_pull', queries_amount, [4, 6], table_column_types, table_column_names,
                                      table_name, connector)
     # if not table_exists(connector, table_name):
     #     create_table_2(connector)
