@@ -19,16 +19,21 @@ table_name = os.environ["TABLENAME"]
 num_queries_batch = 1
 connector = PostgresConnector()
 np.random.seed(123)
-with open("query_pull", 'rb') as f:
+with open(".query_pull_1000", 'rb') as f:
     query_pull = pickle.load(f)
 
     ENV_NAME = 'DatabaseIndexesEnv-v0'
     register(
-            id=ENV_NAME,
-            entry_point='dbenv:DatabaseIndexesEnv',
-            kwargs={'n': COLUMNS_AMOUNT, 'table_name': table_name, 'query_pull': query_pull,
-                    'connector': connector, 'k': 3}
-        )
+        id=ENV_NAME,
+        entry_point='dbenv:DatabaseIndexesEnv',
+        kwargs={'n': COLUMNS_AMOUNT,
+                'table_name': table_name,
+                'query_pull': query_pull,
+                'batch_size': BATCH_SIZE,
+                'connector': PostgresConnector(),
+                'k': 3,
+                'max_episodes': 50}
+    )
 
     # Get the environment and extract the number of actions.
     env = gym.make(ENV_NAME)
@@ -36,10 +41,10 @@ with open("query_pull", 'rb') as f:
 
     # Next, we build a very simple model.
     model = Sequential()
-    model.add(Flatten(input_shape=(BATCH_SIZE, COLUMNS_AMOUNT)))
-    model.add(Dense((BATCH_SIZE, COLUMNS_AMOUNT)))
+    model.add(Flatten(input_shape=(1, BATCH_SIZE + 1, COLUMNS_AMOUNT)))
+    model.add(Dense((BATCH_SIZE + 1) * COLUMNS_AMOUNT))
     model.add(Activation('relu'))
-    model.add(Dense((BATCH_SIZE, COLUMNS_AMOUNT)))
+    model.add(Dense((BATCH_SIZE + 1) * COLUMNS_AMOUNT))
     model.add(Activation('relu'))
     model.add(Dense(COLUMNS_AMOUNT))
     model.add(Activation('linear'))
@@ -56,7 +61,7 @@ with open("query_pull", 'rb') as f:
     # Okay, now it's time to learn something! We visualize the training here for show, but this
     # slows down training quite a lot. You can always safely abort the training prematurely using
     # Ctrl + C.
-    dqn.fit(env, nb_steps=50, visualize=False, verbose=1)
+    dqn.fit(env, nb_steps=1000, visualize=True, verbose=1)
 
     # After training is done, we save the final weights.
     dqn.save_weights('dqn_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
