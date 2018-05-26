@@ -64,6 +64,14 @@ def add_index(connector, column_number, table_name):
     connector.commit()
 
 
+def get_estimated_execution_time(connector, query):
+    return explain_query(connector, query)[0][0]['Plan']['Total Cost']
+
+
+def explain_query(connector, query):
+    return connector.query("EXPLAIN (FORMAT json) " + query).fetchone()
+
+
 def get_execution_time(connector, query):
     return explain_analyze_query(connector, query)[0][0]['Execution Time']
 
