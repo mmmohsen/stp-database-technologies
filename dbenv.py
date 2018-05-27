@@ -2,7 +2,7 @@ import numpy as np
 
 import gym
 from gym import spaces
-
+from numpy import median
 from db import drop_indexes, get_execution_time, add_index
 
 
@@ -56,7 +56,10 @@ class DatabaseIndexesEnv(gym.Env):
         cost = cached
         if not cached:
             add_index(self.connector, action, self.table_name)
-            cost = self._get_execution_time_for_batch_str()
+            costs = list()
+            for y in xrange(3):
+                costs.append(self._get_execution_time_for_batch_str())
+            cost = median(costs)
             self.cache[self._key_for_state_query()] = cost
         reward = 1 / float(cost) * 10000
         return self.state, reward, self.step_number >= self.k, {}

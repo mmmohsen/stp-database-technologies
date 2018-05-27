@@ -1,18 +1,27 @@
+import heapq
 import os
+import pickle
 
+from sklearn.metrics import hamming_loss
 import gym
 import numpy as np
 import pandas as pd
+from sklearn.svm import LinearSVC, SVC
+from sklearn import neighbors
 import os_params_values
 import matplotlib.pyplot as plt
+from sklearn import preprocessing
 from gym.envs import register
+from sklearn.metrics import f1_score
 # from typing import Dict, Any
+from sklearn.model_selection import cross_val_score
 import csv
+from sklearn.naive_bayes import GaussianNB
 from PostgresConnector import PostgresConnector
-from db import create_table, table_exists, create_table_2, load_table
+from db import create_table, table_exists, create_table_2, load_table, get_execution_time, add_index, drop_indexes
 # change this config for different data types
 from dbenv import state_to_int
-from queryPull import generate_query_pull
+from queryPull import generate_query_pull, generate_query_pull_no_return
 from timeit import default_timer as timer
 from sklearn.datasets import make_multilabel_classification
 from sklearn.multiclass import OneVsRestClassifier
@@ -20,6 +29,8 @@ from numpy import loadtxt
 from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+import numpy as np
+from numpy import median
 
 table_name = os.environ["TABLENAME"]
 COLUMNS_AMOUNT = 17
@@ -27,22 +38,22 @@ table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'de
                       'char(1)', 'date', 'date', 'date', 'text', 'text', 'text', 'text']
 table_column_names = list(['column' + str(x) for x in range(COLUMNS_AMOUNT)])
 
-num_workloads = 2
+num_workloads = 500
 
 
 class Q_table_c:
     Q_table = {}  # type: Dict[Any, Any]
 
 
-NUM_EPISODES = 2
+NUM_EPISODES = 30
 GAMMA = 0.9  # the cummulative reward, how much the future reward matters
-ALPHA = 0.01  # the learning rate, worth tunning.
 exploration_rate = 1.0  # represents the exploration rate to be decayed by the time
 num_actions = 3
 num_queries_batch = 5  # the number of queries per workload.
 min_exp_rate = 0.01
 queries_amount = num_queries_batch * num_workloads  # the queries to be generated
-
+initial_lr = 1.0  # Learning rate
+min_lr = 0.003
 """ 
 No two workloads can share the same Q_table_c.Q_table.
 """
@@ -118,8 +129,10 @@ def run_qlearning(query_pull, connector):
 
     current_query_idx = 0
 
-    for workload in range(num_workloads):
+    for workload in xrange(0, num_workloads):
 
+        exploration_rate = 1.0  # represents the exploration rate to be decayed by the time
+        initial_lr = 1.0  # Learning rate
         query_batch = list()
         Q_table_c.Q_table = {}
         query_batch = list()
@@ -129,23 +142,20 @@ def run_qlearning(query_pull, connector):
         start = timer()
         for i in range(current_query_idx, current_query_idx + num_queries_batch):
             query_batch.append(query_pull[i]['query'])
-            workload_selectivity_l.append(map(lambda x: x if x != 1 else 0, query_pull[i]['sf_array']))
-
+            workload_selectivity_l.append(map(lambda x: x, query_pull[i]['sf_array']))
         current_query_idx += num_queries_batch
-        workload_selectivity = [sum(x) for x in zip(*workload_selectivity_l)]
+        workload_selectivity = np.prod(workload_selectivity_l, axis=0).tolist()
+        max_workload_selectivity = max(workload_selectivity)
 
-        # so what is -5 .... it represent columns with high selectivity
-        # in the normal case it will adding 1 + 1 + 1 + 1 + 1 = 5
-        # this can conflict with the addition of workload selectivity
-        # remember that I'm considering the features are selectivity per workload not per column
-        # to not also break the concept of normalization I have choosen -5, can be -1 but not 0
-        workload_selectivity = map(lambda x: x if x != 0 else -5, workload_selectivity)
         # set the corrsponding batch, here please notice it is an array of strings not an array of query objects.
         env.set_query_batch(query_batch)
-
         actions_taken = list()
-        # the good old q learning we discussed before, Epsilon greedy policy
-        # one should clear the cache.
+        # as a heuristic: the indices with the lowest selectivity
+        selectivity_indices = heapq.nsmallest(3, xrange(len(workload_selectivity)), workload_selectivity.__getitem__)
+
+        print workload_selectivity
+        print  ########################
+
         env.clear_cache()
         for episode in range(NUM_EPISODES):
             state = env.reset()
@@ -154,14 +164,25 @@ def run_qlearning(query_pull, connector):
             eps = exploration_rate / np.sqrt(episode + 1)
             eps = max(eps, min_exp_rate)
             episode_total_reward = 0
+            episode_total_qreward = 0
             episode_strategy = []
+            eta = max(min_lr, initial_lr * (0.85 ** (episode // 100)))
             ## now the learning comes
-            for _ in range(3):
+            for kk in range(3):
                 # do exploration, i.e., choose a random actions
                 # make sure the last step is exploitation unless the state is new
-                if is_new_state(state) or (np.random.uniform(0, 1) < eps and episode != NUM_EPISODES - 1):
+                if episode == 0:
                     episode_strategy.append("explore")
+                    action = selectivity_indices[kk]
+                    Q_table_c.Q_table[state_to_int(state)] = {}
+                    Q_table_c.Q_table[state_to_int(state)][action] = 0
+                elif (is_new_state(state) or (np.random.uniform(0, 1) < eps)) and episode != NUM_EPISODES - 1:
+                    episode_strategy.append("explore")
+                    # generate only actions that matches something with selectivity.
                     action = env.action_space.sample()
+                    # high selectivity, not a good option for an index
+                    while workload_selectivity[action] >= max_workload_selectivity:
+                        action = env.action_space.sample()
                     if is_new_state(state):
                         Q_table_c.Q_table[state_to_int(state)] = {}
                     if action not in Q_table_c.Q_table[state_to_int(state)]:
@@ -180,31 +201,34 @@ def run_qlearning(query_pull, connector):
 
                 if is_new_state(state_new):
                     next_action = env.action_space.sample()
-                    while (action == next_action):
+                    while (action == next_action or workload_selectivity[next_action] >= max_workload_selectivity):
                         next_action = env.action_space.sample()
                     next_action_q_value = 0
 
                 else:
                     next_action, next_action_q_value = get_action_maximum_reward(state_new)
 
-                Q_table_c.Q_table[state_old_int][action] += ALPHA * (reward + GAMMA * next_action_q_value -
-                                                                     Q_table_c.Q_table[state_old_int][action])
+                Q_table_c.Q_table[state_old_int][action] += eta * (reward + GAMMA * next_action_q_value -
+                                                                   Q_table_c.Q_table[state_old_int][action])
+                episode_total_qreward += Q_table_c.Q_table[state_old_int][action]
                 state, action = state_new, next_action
             actions_taken_s = ','.join(str(e) for e in actions_taken)
             print(
-                "episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}', strategy = {4}"
-                    .format(episode, float(episode_total_reward), state_to_string(state), actions_taken_s,
+                "episode num = '{0}', episode_total_immediate_rewards = '{1}', episode_total_reward = '{2}', current_state = '{3}', actions_taken = '{4}', strategy = {5}"
+                    .format(episode, float(episode_total_reward), float(episode_total_qreward), state_to_string(state),
+                            actions_taken_s,
                             episode_strategy))
             with open(os.environ["QLEARNINGLOG"], 'a') as myfile:
                 myfile.write(
-                    "episode num = '{0}', episode_total_reward = '{1}', current_state = '{2}', actions_taken = '{3}', strategy = {4} \n"
-                    .format(episode, float(episode_total_reward), state_to_string(state), actions_taken_s,
-                            episode_strategy))
+                    "episode num = '{0}', episode_total_immediate_rewards = '{1}', episode_total_reward = '{2}', current_state = '{3}', actions_taken = '{4}', strategy = {5} \n"
+                        .format(episode, float(episode_total_reward), float(episode_total_qreward),
+                                state_to_string(state), actions_taken_s,
+                                episode_strategy))
 
         # with the assumption q learning is doing fine, the end of the episode shall give you the highest reward
         # thus the best action, choose them as the best action for this workload
+
         indices_arr = [0] * COLUMNS_AMOUNT
-        # please remember I'm c/c++ programmer, if you can do it in fancy python way. go ahead
         for action in actions_taken:
             indices_arr[action] = 1
         end = timer()
@@ -213,6 +237,12 @@ def run_qlearning(query_pull, connector):
         with open(os.environ["GENERATED_DATA"], 'a') as myfile:
             wr = csv.writer(myfile)
             wr.writerow(workload_selectivity + indices_arr)
+        with open(os.environ["GENERATED_DATA_H"], 'a') as myfile:
+            wr = csv.writer(myfile)
+            wr.writerow(workload_selectivity + indices_arr)
+        with open(os.environ["GENERATED_DATA_2"], 'a') as myfile:
+            wr = csv.writer(myfile)
+            wr.writerow(workload_selectivity + actions_taken)
 
 
 # why xgboost, it wins on kaggle
@@ -224,20 +254,33 @@ def build_xgboost_model(test_size=0.33):
     X = dataset[:, 0:COLUMNS_AMOUNT]
     Y = dataset[:, COLUMNS_AMOUNT:]
     seed = 7
+
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=test_size, random_state=seed)
 
     # fit model no training data
     model = XGBClassifier()
     classif = OneVsRestClassifier(model)
-    classif.fit(X_train, y_train)
+    fited_model = classif.fit(X_train, y_train)
+    #    print X.shape
+    #    scores = cross_val_score(fited_model, X, Y, cv=5, scoring='f1_micro')
+    #    print scores
     y_pred = classif.predict(X_test)
+    #    print  y_pred
+    #    print y_test
+
     accuracy = accuracy_score(y_test, y_pred)
-    print("Accuracy: %.2f%%" % (accuracy * 100.0))
+    f1_sr_micro = f1_score(y_test, y_pred, average="micro")
+    f1_sr_samples = f1_score(y_test, y_pred, average="samples")
+    ham_loss = hamming_loss(y_test, y_pred)
+    print("f1 score with micro average: %.2f" % f1_sr_micro)
+    #    print("f1 score with sample average: %.2f" % f1_sr_samples)
+    print("hamming loss: %.2f" % ham_loss)
+
+    print("Accuracy: %.2f" % (accuracy))
+    with open("./classifier", 'wb') as f:
+        pickle.dump(classif, f)
+
     return {'classifier': classif, 'accuracy': accuracy}
-
-
-def evaluate_model():
-    print "coming soon :D"
 
 
 def main():
@@ -245,7 +288,8 @@ def main():
     print "1. Generating the queries and the corresponding selectivities"
     print "#########################################################################################################"
     connector = PostgresConnector()
-    query_pull = generate_query_pull('.query_pull', queries_amount, [4, 6], table_column_types, table_column_names,
+    query_pull = generate_query_pull('query_pull_500', 1 * num_queries_batch, [4, 6], table_column_types,
+                                     table_column_names,
                                      table_name, connector, first_run=False)
     start = timer()
     print "#########################################################################################################"
@@ -265,19 +309,7 @@ def main():
     print "#########################################################################################################"
     print "3. build the supervised learning model"
     print "#########################################################################################################"
-
-    accuracy = build_xgboost_model()['accuracy']
-    end = timer()
-
-    with open(os.environ["OVERALLLOG"], 'a') as myfile:
-        myfile.write(
-            "accuarcy = '{0}', training time in (ms) = '{1}'\n"
-                .format(accuracy, end - start ))
-
-    print "#########################################################################################################"
-    print "4. Evaluate the model"
-    print "#########################################################################################################"
-    evaluate_model()
+    classifier = build_xgboost_model()['classifier']
 
 
 if __name__ == "__main__":

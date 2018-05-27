@@ -33,6 +33,31 @@ def generate_query(selected_columns_amount, participating_columns, table_name, c
         query.add_column(column)
     return query.generate_query_row(total_amount_of_rows)
 
+def generate_query_no_return(selected_columns_amount, participating_columns, table_name, connector, total_columns_amount,
+                   total_amount_of_rows=None):
+    """
+    Generates random range query for the column amount given.
+    -> selects the column to be used in query randomly
+    -> selects the predicated for every column in a query randomly
+    -> select the data value of column randomly
+    """
+    idxs = np.random.choice(len(participating_columns), selected_columns_amount, replace=False)
+    participating_columns = np.array(participating_columns)
+    columns_to_query = [Column(column) for column in participating_columns[idxs]]
+    query = Query(table_name, connector, total_columns_amount)
+    for column in columns_to_query:
+        max_value = get_min_value(connector, table_name, column.name)
+        min_value = get_max_value(connector, table_name, column.name)
+        if column.type == 'integer':
+            bounds = (min_value, max_value)
+        else:
+            max_date = np.datetime64(min_value)
+            min_date = np.datetime64(max_value)
+            bounds = (min_date, max_date)
+        column.set_bounds(bounds)
+        query.add_column(column)
+    return query.generate_query_row2(total_amount_of_rows)
+
 
 def random_date(start, end):
     """Generate a random datetime between `start` and `end`"""
@@ -57,6 +82,13 @@ class Query(object):
         )
         return "SELECT * FROM {} ".format(self.table_name) + where_clause + ";"
 
+    def build_query2(self):
+        where_clause = "WHERE " + "  ".join(
+            ["column2 = -1"]
+        )
+        return "SELECT * FROM {} ".format(self.table_name) + where_clause + ";"
+
+
     def generate_query_row(self, total_amount_of_rows=None):
         """generates query with SF for each column selected"""
 
@@ -75,6 +107,15 @@ class Query(object):
                 self.sf_array.append(1)
 
         return {'query': self.build_query(), 'sf_array': self.sf_array}
+
+
+    def generate_query_row2(self, total_amount_of_rows=None):
+        """generates query with SF for each column selected"""
+
+        for i in range(self.total_columns_amount):
+            self.sf_array.append(1)
+
+        return {'query': self.build_query2(), 'sf_array': self.sf_array}
 
 
 class Column(object):
