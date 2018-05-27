@@ -4,7 +4,7 @@ import numpy as np
 
 from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names
-from db import add_index, drop_indexes, get_estimated_execution_time
+from db import add_index, drop_indexes, get_estimated_execution_time, get_estimated_execution_time_median
 from qlearn.main import table_name
 from queryPull import generate_query_pull
 from qlearn.main import get_indexes_qagent
@@ -50,7 +50,7 @@ class TestResults(TestCase):
             add_index(connector, index, table_name)
         heuristically_estimated_execution_time = 0
         for query in queries:
-            heuristically_estimated_execution_time += get_estimated_execution_time(connector, query['query'])
+            heuristically_estimated_execution_time += get_estimated_execution_time_median(connector, query['query'], 3)
         drop_indexes(connector, table_name)
         indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
         # extra clean up to make sure no indices left from the agent
@@ -60,6 +60,6 @@ class TestResults(TestCase):
             add_index(connector, index, table_name)
         qlearning_estimated_execution_time = 0
         for query in queries:
-            qlearning_estimated_execution_time += get_estimated_execution_time(connector, query['query'])
+            qlearning_estimated_execution_time += get_estimated_execution_time_median(connector, query['query'], 3)
         print(heuristically_estimated_execution_time, ' ', qlearning_estimated_execution_time)
         self.assertGreater(heuristically_estimated_execution_time, qlearning_estimated_execution_time)

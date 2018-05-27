@@ -1,3 +1,5 @@
+from numpy import median
+
 def create_table(dataset, table_name, table_column_types, connector):
     """
     Creates table for the given representation of csv as pandas table.
@@ -66,6 +68,12 @@ def add_index(connector, column_number, table_name):
 
 def get_estimated_execution_time(connector, query):
     return explain_query(connector, query)[0][0]['Plan']['Total Cost']
+
+def get_estimated_execution_time_median(connector, query, num_iterations):
+    estimates = list()
+    for _ in xrange(num_iterations):
+        estimates.append(explain_query(connector, query)[0][0]['Plan']['Total Cost'])
+    return median(estimates)
 
 
 def explain_query(connector, query):
