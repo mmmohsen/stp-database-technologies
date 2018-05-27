@@ -4,7 +4,7 @@ import numpy as np
 
 from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names, COLUMNS_AMOUNT
-from db import add_index, drop_indexes, get_estimated_execution_time
+from db import add_index, drop_indexes, get_estimated_execution_time, get_estimated_execution_time_median
 from main import table_name
 from queryPull import generate_query_pull
 from qlearn.main import get_indexes_qagent
@@ -37,7 +37,7 @@ class TestResults(TestCase):
                 add_index(connector, index, table_name)
                 total_time = 0
             for query in queries:
-                total_time += get_estimated_execution_time(connector, query['query'])
+                total_time += get_estimated_execution_time_median(connector, query['query'], 3)
             drop_indexes(connector, table_name)
             return total_time
 
