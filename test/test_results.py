@@ -8,7 +8,7 @@ from db import add_index, drop_indexes, get_estimated_execution_time, get_estima
 from main import table_name
 from queryPull import generate_query_pull
 from qlearn.main import get_indexes_qagent
-
+from supervised.main import get_indexes_supervised
 
 class TestResults(TestCase):
 
@@ -52,17 +52,26 @@ class TestResults(TestCase):
         indexes_to_add = [i[0] for i in
                           (sorted(enumerate(sf_array), key=lambda x: x[1]))[:self.__index_amount]]
         heuristically_estimated_execution_time = get_execution_time_for_indexes_configuration()
-
-        indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
-        # extra clean up to make sure no indices left from the agent
         drop_indexes(connector, table_name)
+        indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
+        #extra clean up to make sure no indices left from the agent
         qlearning_estimated_execution_time = get_execution_time_for_indexes_configuration()
-
+        drop_indexes(connector, table_name)
+        indexes_to_add = get_indexes_supervised(self.__index_amount, queries)
+        supervised_estimated_execution_time = get_execution_time_for_indexes_configuration()
+        drop_indexes(connector, table_name)
         indexes_to_add = random.sample(range(COLUMNS_AMOUNT), self.__index_amount)
         random_indexes_estimated_execution_time = get_execution_time_for_indexes_configuration()
+        drop_indexes(connector, table_name)
+        print('heuristic:{}, supervised:{}, random indexes:{}'.format(heuristically_estimated_execution_time,
+                                                                     supervised_estimated_execution_time,
+                                                                     random_indexes_estimated_execution_time))
 
         print('heuristic:{}, qlearning:{}, random indexes:{}'.format(heuristically_estimated_execution_time,
-                                                                     qlearning_estimated_execution_time,
-                                                                     random_indexes_estimated_execution_time))
+                                                                      qlearning_estimated_execution_time,
+                                                                      random_indexes_estimated_execution_time))
+
+        self.assertGreater(heuristically_estimated_execution_time, supervised_estimated_execution_time)
+        self.assertGreater(random_indexes_estimated_execution_time, supervised_estimated_execution_time)
         self.assertGreater(heuristically_estimated_execution_time, qlearning_estimated_execution_time)
         self.assertGreater(random_indexes_estimated_execution_time, qlearning_estimated_execution_time)
