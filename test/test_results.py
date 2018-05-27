@@ -5,8 +5,9 @@ import numpy as np
 from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names
 from db import add_index, drop_indexes, get_estimated_execution_time
-from main import table_name
+from qlearn.main import table_name
 from queryPull import generate_query_pull
+from qlearn.main import get_indexes_qagent
 
 
 class TestResults(TestCase):
@@ -31,10 +32,14 @@ class TestResults(TestCase):
     def __test_results(self, columns_participating):
         connector = PostgresConnector()
         drop_indexes(connector, table_name)
+        ## though I would strongly recommend ... in the generate query_pull
+        ## with checking the file exsistence, if it does exsist .... then load data
+        ## from the pickle file
         generate_query_pull('../.test_query_pull_' + str(columns_participating), self.__queries_amount,
                             columns_participating, table_column_types,
                             table_column_names,
                             table_name, connector)
+        ## this with open to be inside the generate query pull :D
         with open('../.test_query_pull_' + str(columns_participating), 'rb') as pickleFile:
             queries = pickle.load(pickleFile)
 
@@ -47,10 +52,14 @@ class TestResults(TestCase):
         for query in queries:
             heuristically_estimated_execution_time += get_estimated_execution_time(connector, query['query'])
         drop_indexes(connector, table_name)
-        indexes_to_add = get_indexes(self.__index_amount, queries)
+        indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
+        # extra clean up to make sure no indices left from the agent
+        drop_indexes(connector, table_name)
+        print(indexes_to_add)
         for index in indexes_to_add:
             add_index(connector, index, table_name)
-        model_estimated_execution_time = 0
+        qlearning_estimated_execution_time = 0
         for query in queries:
-            model_estimated_execution_time += get_estimated_execution_time(connector, query['query'])
-        print(heuristically_estimated_execution_time, ' ', model_estimated_execution_time)
+            qlearning_estimated_execution_time += get_estimated_execution_time(connector, query['query'])
+        print(heuristically_estimated_execution_time, ' ', qlearning_estimated_execution_time)
+        self.assertGreater(heuristically_estimated_execution_time, qlearning_estimated_execution_time)
