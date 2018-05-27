@@ -26,3 +26,6 @@ def generate_query_pull(file_path, queries_amount, selected_columns_amount_range
                                        len(table_column_names), total_amount_of_rows))
         with open(file_path, 'wb') as f:
             pickle.dump(data, f)
+        return data
+    with open(file_path, 'rb') as pickleFile:
+        return pickle.load(pickleFile)
