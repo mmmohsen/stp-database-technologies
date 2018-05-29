@@ -68,9 +68,13 @@ class DatabaseIndexesEnv(gym.Env):
             self.state[action] = True
             add_index(self.connector, action, self.table_name)
             self.action_space.disable_actions((action,))
+            cost = self._get_execution_time_for_batch()
+            reward = 1.0 / cost
+        else:
+            reward = -1.0
         finished = self.step_number >= self.k
-        cost = self._get_execution_time_for_batch()
-        reward = -cost
+        self.render()
+        print(reward)
         return np.array([self.state, *[x['sf_array'] for x in self.query_batch]]), reward, finished, {}
 
     def set_query_batch(self, query_batch):

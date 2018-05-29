@@ -71,7 +71,7 @@ def get_estimated_execution_time(connector, query):
 
 def get_estimated_execution_time_median(connector, query, num_iterations):
     estimates = list()
-    for _ in xrange(num_iterations):
+    for _ in range(num_iterations):
         estimates.append(explain_query(connector, query)[0][0]['Plan']['Total Cost'])
     return median(estimates)
 

@@ -32,7 +32,7 @@ class TestDatabaseIndexesEnv(TestCase):
 
     def test_cache(self):
         np.random.seed(123)
-        with open("..\.query_pull_1000", 'rb') as f:
+        with open("..\query_pull_1000v3.pkl", 'rb') as f:
             query_pull = pickle.load(f)
             register(
                 id='DatabaseIndexesEnv-v0',
