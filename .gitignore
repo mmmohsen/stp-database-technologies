@@ -12,6 +12,3 @@ __pycache__/
 
 #data set
 lineitemSF1.csv
-
-#h5f NN snapshots
-*.h5f
