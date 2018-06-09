@@ -1,3 +1,5 @@
+from functools import reduce
+
 import numpy as np
 
 import gym
@@ -7,70 +9,87 @@ from db import drop_indexes, get_execution_time, add_index
 
 
 class DatabaseIndexesEnv(gym.Env):
+    metadata = {
+        'render.modes': ['ansi'],
+        # 'video.frames_per_second': 50
+    }
     """
     Base env providing the actor the means to abstract actions/state. Abstracts all real manipulations with db
     (e.g. taking actions, getting cost).
     """
 
-    def __init__(self, n, table_name, query_batch, connector, k=3):
+    def __init__(self, n, table_name, query_pull, batch_size, connector, max_episodes, k=3):
         """
         Constructs new env.
         :param n: number of columns
         :param table_name: name of the table
-        :param query_batch: collection of queries
+        :param query_pull: collection of queries
         :param connector: database connection
         :param k: max number of indices
         """
         super(DatabaseIndexesEnv, self).__init__()
+        self.batch_size = batch_size
+        self.max_episodes = max_episodes
+        self.n = n
         self.action_space = Dynamic(n)
-        self.observation_space = spaces.Tuple([spaces.Discrete(2) for _ in range(n)])
+        self.observation_space = spaces.Box(low=0, high=1.0, shape=(batch_size, n))
         self.state = list(False for _ in range(n))
         self.table_name = table_name
-        self.query_batch = query_batch
+        self.query_pull = query_pull
+        self.query_batch = np.random.choice(query_pull, batch_size)
         self.connector = connector
         self.k = k
         self.step_number = 0
+        self.episode_number = 0
         self.cache = {}
-        # self.old_cost = self._get_execution_time_for_batch()
 
     def reset(self):
         self.step_number = 0
+        self.episode_number += 1
+        if self.episode_number >= self.max_episodes:
+            self.query_batch = np.random.choice(self.query_pull, self.batch_size)
+            self.episode_number = 0
         drop_indexes(self.connector, self.table_name)
-        # self.old_cost = self._get_execution_time_for_batch()
         self.state = list(False for _ in range(len(self.state)))
         self.action_space = Dynamic(len(self.state))
-        return self.state
+        return np.array([self.state, *[x['sf_array'] for x in self.query_batch]])
 
     def render(self, mode='human'):
         # no fancy stuff for now
-        super(DatabaseIndexesEnv, self).render(mode)
+        # if mode == 'ansi':
+        print("\n" + ' '.join(('%*s' % (2, x) for x in list(range(self.n)))) + "\n"
+              + " ".join(('%*s' % (2, i) for i in (1 if x else 0 for x in self.state))))
+        # else:
+        #    return super(DatabaseIndexesEnv, self).render(mode)
 
     def step(self, action):
         self.step_number += 1
-        self.state[action] = True
-        self.action_space.disable_actions((action,))
-        cached = None
-        try:
-            cached = self.cache[self._key_for_state_query()]
-        except KeyError:
-            pass
-        cost = cached
-        if not cached:
+        if self.action_space.contains(action):
+            self.state[action] = True
             add_index(self.connector, action, self.table_name)
+            self.action_space.disable_actions((action,))
             cost = self._get_execution_time_for_batch()
-            self.cache[self._key_for_state_query()] = cost
-        reward = -cost
-        return self.state, reward, self.step_number >= self.k, {}
+            reward = 1.0 / cost
+        else:
+            reward = -1.0
+        finished = self.step_number >= self.k
+        self.render()
+        print(reward)
+        return np.array([self.state, *[x['sf_array'] for x in self.query_batch]]), reward, finished, {}
 
     def set_query_batch(self, query_batch):
         self.query_batch = query_batch
 
     def _get_execution_time_for_batch(self):
-        return sum(
-            (get_execution_time(self.connector, query.build_query(self.table_name)) for query in self.query_batch))
+        return sum((self._get_execution_time_for_query(self.connector, query['query']) for query in self.query_batch))
 
-    def _key_for_state_query(self):
-        return state_to_int(self.state), str(list([str(x) for x in self.query_batch]))
+    def _get_execution_time_for_query(self, connector, built_query):
+        try:
+            ex_time = self.cache[state_to_int(self.state), built_query]
+        except KeyError:
+            ex_time = get_execution_time(connector, built_query)
+            self.cache[state_to_int(self.state), built_query] = ex_time
+        return ex_time
 
 
 def state_to_int(state):

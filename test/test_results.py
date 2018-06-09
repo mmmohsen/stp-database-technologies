@@ -1,19 +1,29 @@
 import random
+from os import path
 from unittest import TestCase
+
+import gym
 import numpy as np
 from scipy.stats import stats
 import itertools
 
+import const
 from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names, COLUMNS_AMOUNT
 from db import add_index, drop_indexes, get_estimated_execution_time, get_estimated_execution_time_median
+from dbenv import DatabaseIndexesEnv
+from dqn import ENV_NAME, load_agent
 from main import table_name
-from queryPull import generate_query_pull
 from qlearn.main import get_indexes_qagent
+from queryPull import generate_query_pull
+
+
+# from qlearn.main import get_indexes_qagent
+# from supervised.main import get_indexes_supervised
 from supervised.main import get_indexes_supervised
 
-class TestResults(TestCase):
 
+class TestResults(TestCase):
     def __init__(self, *args, **kwargs):
         super(TestResults, self).__init__(*args, **kwargs)
         self.__queries_amount = 5
@@ -39,7 +49,7 @@ class TestResults(TestCase):
                 add_index(connector, index, table_name)
                 total_time = 0
             for query in queries:
-                total_time += get_estimated_execution_time_median(connector, query['query'], 3)
+                total_time += get_estimated_execution_time(connector, query['query'], 3)
             drop_indexes(connector, table_name)
             return total_time
 
@@ -48,6 +58,18 @@ class TestResults(TestCase):
                 methods[method].append(get_execution_time_for_indexes_configuration(indexes))
             else:
                 methods[method] = [get_execution_time_for_indexes_configuration(indexes)]
+
+        def get_indexes_dqn():
+            env = DatabaseIndexesEnv(n=const.COLUMNS_AMOUNT,
+                                     table_name=table_name,
+                                     query_pull=queries,
+                                     batch_size=const.BATCH_SIZE,
+                                     connector=connector,
+                                     k=3,
+                                     max_episodes=1)
+            dqn = load_agent(path.join("..", "dqn_{}_weights_better_reward.h5f".format(ENV_NAME)))
+            dqn.test(env, nb_episodes=1)
+            return [i for i, x in enumerate(env.state) if x]
 
         connector = PostgresConnector()
         drop_indexes(connector, table_name)
@@ -70,6 +92,11 @@ class TestResults(TestCase):
             indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
             add_execution_time_for_method_and_indexes_configuration('qlearning', indexes_to_add)
             #extra clean up to make sure no indices left from the agent
+            drop_indexes(connector, table_name)
+
+            # dqn
+            indexes_to_add = get_indexes_dqn()
+            add_execution_time_for_method_and_indexes_configuration('dqn', indexes_to_add)
             drop_indexes(connector, table_name)
 
             indexes_to_add = get_indexes_supervised(self.__index_amount, queries)
