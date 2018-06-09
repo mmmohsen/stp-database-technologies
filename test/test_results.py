@@ -49,7 +49,7 @@ class TestResults(TestCase):
                 add_index(connector, index, table_name)
                 total_time = 0
             for query in queries:
-                total_time += get_estimated_execution_time_median(connector, query['query'], 3)
+                total_time += get_estimated_execution_time(connector, query['query'], 3)
             drop_indexes(connector, table_name)
             return total_time
 
