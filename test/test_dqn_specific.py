@@ -2,21 +2,19 @@ import pickle
 from os import path
 from unittest import TestCase
 
-import gym
 import numpy as np
-from gym.envs import register
 
 import const
 from PostgresConnector import PostgresConnector
 from dbenv import DatabaseIndexesEnv
-from dqn import load_agent, ENV_NAME, table_name
+from dqn_specific import load_agent, ENV_NAME, table_name
 
 
 class TestDatabaseIndexesEnv(TestCase):
     def test_dqn_against_heuristic(self):
-        np.random.seed(103)
+        np.random.seed(123)
         with open(path.join("..", "query_pull_1000v3.pkl"), 'rb') as f:
-            query_pull = pickle.load(f)
+            query_pull = pickle.load(f)[0:5]
             workload = np.random.choice(query_pull, const.BATCH_SIZE)
             env = DatabaseIndexesEnv(n=const.COLUMNS_AMOUNT,
                                      table_name=table_name,
@@ -25,7 +23,7 @@ class TestDatabaseIndexesEnv(TestCase):
                                      connector=PostgresConnector(),
                                      k=3,
                                      max_episodes=1)
-            dqn = load_agent(path.join("..", "dqn_{}_weights_better_reward.h5f".format(ENV_NAME)))
+            dqn = load_agent(path.join("..", "dqn_specific_{}.h5f".format(ENV_NAME)))
             results = dqn.test(env, nb_episodes=1)
             print(results)
             print(env.state)
