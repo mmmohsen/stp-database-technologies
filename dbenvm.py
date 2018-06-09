@@ -1,3 +1,5 @@
+from functools import reduce
+
 import numpy as np
 
 import gym
@@ -57,7 +59,7 @@ class DatabaseIndexesEnv(gym.Env):
         if not cached:
             add_index(self.connector, action, self.table_name)
             costs = list()
-            for y in xrange(1):
+            for y in range(1):
                 costs.append(self._get_execution_time_for_batch_str())
             cost = median(costs)
             self.cache[self._key_for_state_query()] = cost
