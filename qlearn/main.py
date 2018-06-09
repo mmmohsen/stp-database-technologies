@@ -10,7 +10,6 @@ import pandas as pd
 from sklearn.svm import LinearSVC, SVC
 from sklearn import neighbors
 import os_params_values
-import matplotlib.pyplot as plt
 from sklearn import preprocessing
 from gym.envs import register
 from sklearn.metrics import f1_score
@@ -115,7 +114,7 @@ def get_indexes_qagent(index_amount, queries, Log=False):
 
     current_query_idx = 0
     query_batch = list()
-    for workload in xrange(1):
+    for workload in range(1):
 
         exploration_rate = 1.0  # represents the exploration rate to be decayed by the time
         initial_lr = 1.0  # Learning rate
@@ -128,17 +127,17 @@ def get_indexes_qagent(index_amount, queries, Log=False):
         start = timer()
         for i in range(current_query_idx, current_query_idx + num_queries_batch):
             query_batch.append(queries[i]['query'])
-            workload_selectivity_l.append(map(lambda x: x, queries[i]['sf_array']))
+            workload_selectivity_l.append(list(map(lambda x: x, queries[i]['sf_array'])))
         current_query_idx += num_queries_batch
         workload_selectivity = np.prod(workload_selectivity_l, axis=0).tolist()
         max_workload_selectivity = max(workload_selectivity)
         env.set_query_batch(query_batch)
         actions_taken = list()
         # as a heuristic: the indices with the lowest selectivity
-        selectivity_indices = heapq.nsmallest(3, xrange(len(workload_selectivity)), workload_selectivity.__getitem__)
+        selectivity_indices = heapq.nsmallest(3, range(len(workload_selectivity)), workload_selectivity.__getitem__)
         if Log:
-            print "Entering the q learning ..... the process can take time."
-            print workload_selectivity
+            print("Entering the q learning ..... the process can take time.")
+            print(workload_selectivity)
         env.clear_cache()
         for episode in range(NUM_EPISODES):
             state = env.reset()
