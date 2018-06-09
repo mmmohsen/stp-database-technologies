@@ -10,7 +10,6 @@ import pandas as pd
 from sklearn.svm import LinearSVC, SVC
 from sklearn import neighbors
 import os_params_values
-import matplotlib.pyplot as plt
 from sklearn import preprocessing
 from gym.envs import register
 from sklearn.metrics import f1_score
@@ -37,14 +36,15 @@ num_queries_batch = 5
 
 COLUMNS_AMOUNT = 17
 
+
 def get_indexes_supervised(index_amount, queries):
     current_query_idx = 0
     query_batch = list()
     query_batch = list()
     workload_selectivity_l = list()
     for i in range(current_query_idx, current_query_idx + num_queries_batch):
-            query_batch.append(queries[i]['query'])
-            workload_selectivity_l.append(map(lambda x: x, queries[i]['sf_array']))
+        query_batch.append(queries[i]['query'])
+        workload_selectivity_l.append(list(map(lambda x: x, queries[i]['sf_array'])))
     workload_selectivity = np.prod(workload_selectivity_l, axis=0).tolist()
     x = np.array(workload_selectivity)
     x = x.reshape(1, 17)
@@ -52,8 +52,8 @@ def get_indexes_supervised(index_amount, queries):
     with open("../supervised/classifier", 'rb') as f:
         classifier = pickle.load(f)
     predicted_probabilities = classifier.predict_proba(x)[0]
-#    print predicted_probabilities
-    return heapq.nlargest(index_amount, xrange(len(predicted_probabilities)), predicted_probabilities.__getitem__)
+    #    print predicted_probabilities
+    return heapq.nlargest(index_amount, range(len(predicted_probabilities)), predicted_probabilities.__getitem__)
 
 
 def build_xgboost_model(test_size=0.33):
