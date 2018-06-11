@@ -101,6 +101,7 @@ class TestResults(TestCase):
 
             indexes_to_add = get_indexes_supervised(self.__index_amount, queries)
             add_execution_time_for_method_and_indexes_configuration('supervised', indexes_to_add)
+            drop_indexes(connector, table_name)
 
             indexes_to_add = random.sample(range(COLUMNS_AMOUNT), self.__index_amount)
             add_execution_time_for_method_and_indexes_configuration('random', indexes_to_add)
