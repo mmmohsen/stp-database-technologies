@@ -2,7 +2,6 @@ import random
 from os import path
 from unittest import TestCase
 
-import gym
 import numpy as np
 from scipy.stats import stats
 import itertools
@@ -10,9 +9,9 @@ import itertools
 import const
 from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names, COLUMNS_AMOUNT
-from db import add_index, drop_indexes, get_estimated_execution_time, get_estimated_execution_time_median
-from dbenv import DatabaseIndexesEnv
-from dqn import ENV_NAME, load_agent
+from db import add_index, drop_indexes, get_estimated_execution_time
+from dqn.dbenv import DatabaseIndexesEnv
+from dqn.dqn import ENV_NAME, load_agent
 from main import table_name
 from qlearn.main import get_indexes_qagent
 from queryPull import generate_query_pull
@@ -67,7 +66,7 @@ class TestResults(TestCase):
                                      connector=connector,
                                      k=3,
                                      max_episodes=1)
-            dqn = load_agent(path.join("..", "dqn_{}_weights_better_reward.h5f".format(ENV_NAME)))
+            dqn = load_agent(path.join("..", "dqn_{}_weights_6_4_2_1_2000_episodes_execution.h5f".format(ENV_NAME)))
             dqn.test(env, nb_episodes=1)
             return [i for i, x in enumerate(env.state) if x]
 
@@ -91,11 +90,12 @@ class TestResults(TestCase):
 
             indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
             add_execution_time_for_method_and_indexes_configuration('qlearning', indexes_to_add)
-            #extra clean up to make sure no indices left from the agent
+            # #extra clean up to make sure no indices left from the agent
             drop_indexes(connector, table_name)
 
             # dqn
             indexes_to_add = get_indexes_dqn()
+            drop_indexes(connector, table_name)
             add_execution_time_for_method_and_indexes_configuration('dqn', indexes_to_add)
             drop_indexes(connector, table_name)
 
@@ -108,7 +108,7 @@ class TestResults(TestCase):
             times_combinations = list(itertools.combinations(methods.values(), 2))
             p_values = [stats.ttest_ind(time[0], time[1])[1] for time in times_combinations]
             print(p_values)
-            if all(p_value < 0.01 for p_value in p_values) and i >= 10 or i >= 50:
+            if all(p_value < 0.01 for p_value in p_values) and i >= 5 or i >= 5:
                 break
             print('try #' + str(i))
             for method, times in methods.items():

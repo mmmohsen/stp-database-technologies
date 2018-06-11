@@ -1,16 +1,11 @@
 import os
 
-import gym
-import numpy as np
-import pandas as pd
 # import os_params_values
-from gym.envs import register
 # from typing import Dict, Any
 
 from PostgresConnector import PostgresConnector
-from db import create_table, table_exists, create_table_2, load_table
 # change this config for different data types
-from dbenv import state_to_int
+from dqn.dbenv import state_to_int
 from const import table_column_types, table_column_names
 from queryPull import generate_query_pull
 
