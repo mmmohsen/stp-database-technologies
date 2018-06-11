@@ -2,13 +2,11 @@ import pickle
 from os import path
 from unittest import TestCase
 
-import gym
 import numpy as np
-from gym.envs import register
 
 import const
 from PostgresConnector import PostgresConnector
-from dbenv import DatabaseIndexesEnv
+from dqn.dbenv import DatabaseIndexesEnv
 from dqn import load_agent, ENV_NAME, table_name
 
 

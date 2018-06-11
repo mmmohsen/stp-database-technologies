@@ -6,7 +6,7 @@ import numpy as np
 
 import const
 from PostgresConnector import PostgresConnector
-from dbenv import DatabaseIndexesEnv
+from dqn.dbenv import DatabaseIndexesEnv
 from dqn_specific import load_agent, ENV_NAME, table_name
 
 

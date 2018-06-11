@@ -1,3 +1,4 @@
+import itertools
 from functools import reduce
 
 import numpy as np
@@ -5,7 +6,7 @@ import numpy as np
 import gym
 from gym import spaces
 
-from db import drop_indexes, get_execution_time, add_index
+from db import drop_indexes, get_execution_time, add_index, get_estimated_execution_time
 
 
 class DatabaseIndexesEnv(gym.Env):
@@ -45,16 +46,20 @@ class DatabaseIndexesEnv(gym.Env):
 
     def reset(self):
         self.step_number = 0
-        self.episode_number += 1
         if self.episode_number >= self.max_episodes:
             self.query_batch = np.random.choice(self.query_pull, self.batch_size)
             self.episode_number = 0
+        if self.episode_number == 0:
+            indexes = touched_indexes(self.query_batch)
+            print("New query batch, touched indexes: " + str(indexes))
+        self.episode_number += 1
         drop_indexes(self.connector, self.table_name)
         self.state = list(False for _ in range(len(self.state)))
         self.action_space = Dynamic(len(self.state))
         return np.array([self.state, *[x['sf_array'] for x in self.query_batch]])
 
     def render(self, mode='human'):
+        pass
         # no fancy stuff for now
         # if mode == 'ansi':
         print("\n" + ' '.join(('%*s' % (2, x) for x in list(range(self.n)))) + "\n"
@@ -73,8 +78,8 @@ class DatabaseIndexesEnv(gym.Env):
         else:
             reward = -1.0
         finished = self.step_number >= self.k
-        self.render()
-        print(reward)
+        #self.render()
+        #print(reward)
         return np.array([self.state, *[x['sf_array'] for x in self.query_batch]]), reward, finished, {}
 
     def set_query_batch(self, query_batch):
@@ -87,13 +92,19 @@ class DatabaseIndexesEnv(gym.Env):
         try:
             ex_time = self.cache[state_to_int(self.state), built_query]
         except KeyError:
-            ex_time = get_execution_time(connector, built_query)
+            ex_time = get_estimated_execution_time(connector, built_query)
             self.cache[state_to_int(self.state), built_query] = ex_time
         return ex_time
 
 
 def state_to_int(state):
     return reduce(lambda prev, x: prev * 2 + (1 if x else 0), state, 0)
+
+
+def touched_indexes(query_batch):
+        sf_arrays = [x['sf_array'] for x in query_batch]
+        indexes_of_touched_per_query = [[i for i, sf in enumerate(sf_array) if sf < 1.0] for sf_array in sf_arrays]
+        return set(itertools.chain(*indexes_of_touched_per_query))
 
 
 class Dynamic(gym.Space):

@@ -1,4 +1,3 @@
-import os
 import pickle
 from unittest import TestCase
 
@@ -8,7 +7,7 @@ from gym.envs import register
 
 import const
 from PostgresConnector import PostgresConnector
-from dbenv import state_to_int
+from dqn.dbenv import state_to_int
 
 
 class TestDatabaseIndexesEnv(TestCase):
