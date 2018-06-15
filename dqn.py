@@ -11,8 +11,8 @@ from rl.policy import BoltzmannQPolicy
 
 from PostgresConnector import PostgresConnector
 from const import COLUMNS_AMOUNT, BATCH_SIZE
-from CustomEpisodeLogger import CustomEpisodeLogger
-from dbenv import DatabaseIndexesEnv
+from dqn.CustomEpisodeLogger import CustomEpisodeLogger
+from dqn.dbenv import DatabaseIndexesEnv
 
 table_name = os.environ["TABLENAME"]
 ENV_NAME = 'DatabaseIndexesEnv-v0'

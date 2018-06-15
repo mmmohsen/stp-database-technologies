@@ -11,7 +11,7 @@ from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names, COLUMNS_AMOUNT
 from db import add_index, drop_indexes, get_estimated_execution_time
 from dqn.dbenv import DatabaseIndexesEnv
-from dqn.dqn import ENV_NAME, load_agent
+from dqn import ENV_NAME, load_agent
 from main import table_name
 from qlearn.main import get_indexes_qagent
 from queryPull import generate_query_pull
