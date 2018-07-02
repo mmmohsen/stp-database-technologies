@@ -11,7 +11,7 @@ from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names, COLUMNS_AMOUNT
 from db import add_index, drop_indexes, get_estimated_execution_time
 from dqn.dbenv import DatabaseIndexesEnv
-from dqn.dqn import ENV_NAME, load_agent
+from dqn import ENV_NAME, load_agent
 from main import table_name
 from qlearn.main import get_indexes_qagent
 from queryPull import generate_query_pull
@@ -66,7 +66,7 @@ class TestResults(TestCase):
                                      connector=connector,
                                      k=3,
                                      max_episodes=1)
-            dqn = load_agent(path.join("..", "dqn_{}_weights_6_4_2_1_2000_episodes_execution.h5f".format(ENV_NAME)))
+            dqn = load_agent(path.join("..", "dqn_{}_weights_6_4_2_1_50000_episodes_estimated.h5f".format(ENV_NAME)))
             dqn.test(env, nb_episodes=1)
             return [i for i, x in enumerate(env.state) if x]
 
