@@ -4,3 +4,6 @@ table_column_types = ['integer', 'integer', 'integer', 'integer', 'integer', 'de
 table_column_names = list(['column' + str(x) for x in range(COLUMNS_AMOUNT)])
 BATCH_SIZE = 5
 N_INDEXES = 3
+table_columns_names_1 = ["ORDERKEY", "PARTKEY", "SUPPKEY", "LINENUMBER", "QUANTITY", "EXTENDEDPRICE", "DISCOUNT", "TAX",
+                        "RETURNFLAG", "LINESTATUS", "SHIPDATE", "COMMITDATE", "RECEIPTDATE", "SHIPINSTRUCT",
+                       "SHIPMODE", "COMMENT", "COMMENT_1"]
