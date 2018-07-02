@@ -12,3 +12,5 @@ __pycache__/
 
 #data set
 lineitemSF1.csv
+
+.git/

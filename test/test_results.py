@@ -5,6 +5,7 @@ from unittest import TestCase
 import numpy as np
 from scipy.stats import stats
 import itertools
+import os, json
 
 import const
 from PostgresConnector import PostgresConnector
@@ -114,6 +115,67 @@ class TestResults(TestCase):
             print('try #' + str(i))
             for method, times in methods.items():
                 print('{}: {}'.format(method, np.mean(times)))
+        print('')
+
+        for method, times in methods.items():
+            print('{}: {}'.format(method, np.mean(times)))
+
+    def test_against_tpch(self):
+        """test our heuristic algorithm, Q-learning, supervised and random approach with TPC-H Queries"""
+        def get_execution_time_for_indexes_configuration(indexes):
+            total_time = 0
+            for index in indexes:
+                add_index(connector, index, "lineitem")
+                total_time = 0
+            for query in queries:
+                total_time += get_estimated_execution_time_median(connector, query['query'], 3)
+            drop_indexes(connector, "lineitem")
+            return total_time
+
+        def add_execution_time_for_method_and_indexes_configuration(method, indexes):
+            if method in methods:
+                methods[method].append(get_execution_time_for_indexes_configuration(indexes))
+            else:
+                methods[method] = [get_execution_time_for_indexes_configuration(indexes)]
+
+        connector = PostgresConnector()
+        drop_indexes(connector, "lineitem")
+        methods = {}
+        i = 0
+        np.warnings.filterwarnings('ignore')
+        total_amount_of_rows = connector.query("select count (*) from lineitem;").fetchone()[0]
+        queries = []
+        sf_array = []
+        with open("../tpc_h_queries/tpch.json") as infile:
+            json_obj = json.load(infile)
+        for elem in json_obj:
+            for subquery in elem["subquery"]:
+                sf_array.append(
+                    float(connector.query(subquery).fetchone()[0]) / float(total_amount_of_rows))
+            queries.append({'query': elem["query"], 'sf_array': sf_array})
+
+        sf_array = np.array([query['sf_array'] for query in queries]).sum(axis=0)
+
+        indexes_to_add = [i[0] for i in
+                          (sorted(enumerate(sf_array), key=lambda x: x[1]))[:self.__index_amount]]
+        add_execution_time_for_method_and_indexes_configuration('heuristic', indexes_to_add)
+
+        indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
+        add_execution_time_for_method_and_indexes_configuration('qlearning', indexes_to_add)
+        drop_indexes(connector, table_name)
+
+        indexes_to_add = get_indexes_supervised(self.__index_amount, queries)
+        add_execution_time_for_method_and_indexes_configuration('supervised', indexes_to_add)
+
+        indexes_to_add = random.sample(range(COLUMNS_AMOUNT), self.__index_amount)
+        add_execution_time_for_method_and_indexes_configuration('random', indexes_to_add)
+
+        times_combinations = list(itertools.combinations(methods.values(), 2))
+        p_values = [stats.ttest_ind(time[0], time[1])[1] for time in times_combinations]
+        print(p_values)
+        print('try #' + str(i))
+        for method, times in methods.items():
+            print('{}: {}'.format(method, np.mean(times)))
         print('')
 
         for method, times in methods.items():
