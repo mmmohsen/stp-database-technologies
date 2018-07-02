@@ -1,17 +1,17 @@
 [  {
-	"query" : "select l_suppkey, sum(l_extendedprice * (1 - l_discount)) from lineitem where l_shipdate >= date '1993-01-01' and l_shipdate < date '1993-01-01' + interval '3' month group by l_suppkey;",
-   "subquery": ["select count (*) from lineitem where l_shipdate >= date '1993-01-01' and l_shipdate < date '1993-01-01' + interval '3' month;"]
+	"query" : "select column2, sum(column5 * (1 - column6)) from lineitem where column10 >= date '1993-01-01' and column10 < date '1993-01-01' + interval '3' month group by column2;",
+   "subquery": ["select count (*) from lineitem where column10 >= date '1993-01-01' and column10 < date '1993-01-01' + interval '3' month;"]
    },
    {
-   "query" : "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order    from lineitem    where l_shipdate <= date '1998-12-01' - interval '71 days'    group by l_returnflag, l_linestatus    order by l_returnflag, l_linestatus;",
-   "subquery": ["select count (*) from lineitem where l_shipdate <= date '1998-12-01' - interval '71 days';"]
+   "query" : "select column8, column9, sum(column4) as sum_qty, sum(column5) as sum_base_price, sum(column5 * (1 - column6)) as sum_disc_price, sum(column5 * (1 - column6) * (1 + column7)) as sum_charge, avg(column4) as avg_qty, avg(column5) as avg_price, avg(column6) as avg_disc, count(*) as count_order    from lineitem    where column10 <= date '1998-12-01' - interval '71 days'    group by column8, column9    order by column8, column9;",
+   "subquery": ["select count (*) from lineitem where column10 <= date '1998-12-01' - interval '71 days';"]
    },
-   {"query" : "select    sum(l_extendedprice * l_discount) as revenue   from    lineitem   where    l_shipdate >= date '1994-01-01'    and l_shipdate < date '1994-01-01' + interval '1' year    and l_discount between 0.08 - 0.01 and 0.08 + 0.01    and l_quantity < 24;   ",
-   "subquery": ["select count (*) from lineitem where l_shipdate >= date '1994-01-01';",
-				"select count (*) from lineitem where l_discount between 0.08 - 0.01 and 0.08 + 0.01 ",
-				"select count (*) from lineitem where l_quantity < 24"]
+   {"query" : "select    sum(column5 * column6) as revenue   from    lineitem   where    column10 >= date '1994-01-01'    and column10 < date '1994-01-01' + interval '1' year    and column6 between 0.08 - 0.01 and 0.08 + 0.01    and column4 < 24;   ",
+   "subquery": ["select count (*) from lineitem where column10 >= date '1994-01-01';",
+				"select count (*) from lineitem where column6 between 0.08 - 0.01 and 0.08 + 0.01 ",
+				"select count (*) from lineitem where column4 < 24"]
 	},
-   {"query" : "select ORDERKEY from lineitem group by ORDERKEY having sum(QUANTITY) > 313",
+   {"query" : "select column0 from lineitem group by column0 having sum(column4) > 313",
    "subquery": ["select count (*) from lineitem"]
 	}
 ]
