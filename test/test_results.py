@@ -66,7 +66,7 @@ class TestResults(TestCase):
                                      connector=connector,
                                      k=3,
                                      max_episodes=1)
-            dqn = load_agent(path.join("..", "dqn_{}_weights_6_4_2_1_2000_episodes_execution.h5f".format(ENV_NAME)))
+            dqn = load_agent(path.join("..", "dqn_{}_weights_6_4_2_1_50000_episodes_estimated.h5f".format(ENV_NAME)))
             dqn.test(env, nb_episodes=1)
             return [i for i, x in enumerate(env.state) if x]
 
