@@ -12,7 +12,7 @@ from PostgresConnector import PostgresConnector
 from const import table_column_types, table_column_names, COLUMNS_AMOUNT
 from db import add_index, drop_indexes, get_estimated_execution_time
 from dqn.dbenv import DatabaseIndexesEnv
-from dqn.dqn import ENV_NAME, load_agent
+#from dqn.dqn import ENV_NAME, load_agent
 from main import table_name
 from qlearn.main import get_indexes_qagent
 from queryPull import generate_query_pull
@@ -31,7 +31,8 @@ class TestResults(TestCase):
 
     def test_results_for_two_columns(self):
         print('Test model for two columns participating')
-        self.__test_results(2)
+        #self.__test_results(2)
+        self.__test_against_tpch()
 
     def test_results_for_four_columns(self):
         print('Test model for four columns participating')
@@ -120,8 +121,9 @@ class TestResults(TestCase):
         for method, times in methods.items():
             print('{}: {}'.format(method, np.mean(times)))
 
-    def test_against_tpch(self):
+    def __test_against_tpch(self):
         """test our heuristic algorithm, Q-learning, supervised and random approach with TPC-H Queries"""
+
         def get_execution_time_for_indexes_configuration(indexes):
             total_time = 0
             for index in indexes:
@@ -151,21 +153,24 @@ class TestResults(TestCase):
         drop_indexes(connector, table_name)
         methods = {}
         np.warnings.filterwarnings('ignore')
-        total_amount_of_rows = connector.query("select count (*) from "+ table_name +";").fetchone()[0]
+        total_amount_of_rows = connector.query("select count (*) from " + table_name + ";").fetchone()[0]
         queries = []
-        sf_array = []
         with open("../tpc_h_queries/tpch.json") as infile:
             json_obj = json.load(infile)
         for elem in json_obj:
-            for subquery in elem["subquery"]:
-                sf_array.append(
-                    float(connector.query(subquery.format(table_name)).fetchone()[0]) / float(total_amount_of_rows))
-            queries.append({'query': elem["query"], 'sf_array': sf_array})
+            sf_list = [1] * 17
+            for subquery, included_col in zip(elem["subquery"], elem["cols"]):
+                subquery = subquery.replace('lineitems', table_name)
+                sf_list[int(included_col)] = float(connector.query(subquery.format(table_name)).fetchone()[0]) / float(
+                    total_amount_of_rows)
+            queries.append({'query': elem["query"].replace('lineitems', table_name), 'sf_array': sf_list})
 
-        sf_array = np.array([query['sf_array'] for query in queries]).sum(axis=0)
+        sf_array = np.array([query["sf_array"] for query in queries])
+        sf_array = [sum(i) for i in zip(*sf_array)]
 
         indexes_to_add = [i[0] for i in
                           (sorted(enumerate(sf_array), key=lambda x: x[1]))[:self.__index_amount]]
+
         add_execution_time_for_method_and_indexes_configuration('heuristic', indexes_to_add)
 
         indexes_to_add = get_indexes_qagent(self.__index_amount, queries, True)
@@ -185,3 +190,6 @@ class TestResults(TestCase):
 
         for method, extime in methods.items():
             print('{}: {}'.format(method, extime))
+
+if __name__ == '__main__':
+    TestResults().test_results_for_two_columns()
