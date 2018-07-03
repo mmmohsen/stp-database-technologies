@@ -1,21 +1,21 @@
 [  {
-	"query" : "select column2, sum(column5 * (1 - column6)) from lineitem where column10 >= date '1993-01-01' and column10 < date '1993-01-01' + interval '3' month group by column2;",
-   "subquery": ["select count (*) from lineitem where column10 >= date '1993-01-01' and column10 < date '1993-01-01' + interval '3' month;"],
+	"query" : "select column2, sum(column5 * (1 - column6)) from lineitems where column10 >= date '1993-01-01' and column10 < date '1993-01-01' + interval '3' month group by column2;",
+   "subquery": ["select count (*) from lineitems where column10 >= date '1993-01-01' and column10 < date '1993-01-01' + interval '3' month;"],
   "cols": ["10"]
    },
    {
-   "query" : "select column8, column9, sum(column4) as sum_qty, sum(column5) as sum_base_price, sum(column5 * (1 - column6)) as sum_disc_price, sum(column5 * (1 - column6) * (1 + column7)) as sum_charge, avg(column4) as avg_qty, avg(column5) as avg_price, avg(column6) as avg_disc, count(*) as count_order    from lineitem    where column10 <= date '1998-12-01' - interval '71 days'    group by column8, column9    order by column8, column9;",
-   "subquery": ["select count (*) from lineitem where column10 <= date '1998-12-01' - interval '71 days';"],
+   "query" : "select column8, column9, sum(column4) as sum_qty, sum(column5) as sum_base_price, sum(column5 * (1 - column6)) as sum_disc_price, sum(column5 * (1 - column6) * (1 + column7)) as sum_charge, avg(column4) as avg_qty, avg(column5) as avg_price, avg(column6) as avg_disc, count(*) as count_order    from lineitems    where column10 <= date '1998-12-01' - interval '71 days'    group by column8, column9    order by column8, column9;",
+   "subquery": ["select count (*) from lineitems where column10 <= date '1998-12-01' - interval '71 days';"],
      "cols": ["10"]
    },
-   {"query" : "select    sum(column5 * column6) as revenue   from    lineitem   where    column10 >= date '1994-01-01'    and column10 < date '1994-01-01' + interval '1' year    and column6 between 0.08 - 0.01 and 0.08 + 0.01    and column4 < 24;   ",
-   "subquery": ["select count (*) from lineitem where column10 >= date '1994-01-01';",
-				"select count (*) from lineitem where column6 between 0.08 - 0.01 and 0.08 + 0.01 ",
-				"select count (*) from lineitem where column4 < 24"],
+   {"query" : "select    sum(column5 * column6) as revenue   from    lineitems   where    column10 >= date '1994-01-01'    and column10 < date '1994-01-01' + interval '1' year    and column6 between 0.08 - 0.01 and 0.08 + 0.01    and column4 < 24;   ",
+   "subquery": ["select count (*) from lineitems where column10 >= date '1994-01-01';",
+				"select count (*) from lineitems where column6 between 0.08 - 0.01 and 0.08 + 0.01 ",
+				"select count (*) from lineitems where column4 < 24"],
      "cols": ["10", "6", "4"]
 	},
-   {"query" : "select column0 from lineitem group by column0 having sum(column4) > 313",
-   "subquery": ["select count (*) from lineitem"],
+   {"query" : "select column0 from lineitems group by column0 having sum(column4) > 313",
+   "subquery": ["select count (*) from lineitems"],
       "cols": []
 	}
 ]
