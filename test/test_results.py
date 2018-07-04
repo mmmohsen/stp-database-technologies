@@ -29,18 +29,21 @@ class TestResults(TestCase):
         self.__queries_amount = 5
         self.__index_amount = 3
 
-    def test_results_for_two_columns(self):
-        print('Test model for two columns participating')
-        #self.__test_results(2)
+    # def test_results_for_two_columns(self):
+    #     print('Test model for two columns participating')
+    #     self.__test_results(2)
+    #
+    # def test_results_for_four_columns(self):
+    #     print('Test model for four columns participating')
+    #     self.__test_results(4)
+    #
+    # def test_results_with_ten_indexes(self):
+    #     print('Test model for ten columns participating')
+    #     self.__test_results(10)
+
+    def test_results_for_tpch_queries(self):
+        print('Test model for tpch queries')
         self.__test_against_tpch()
-
-    def test_results_for_four_columns(self):
-        print('Test model for four columns participating')
-        self.__test_results(4)
-
-    def test_results_with_ten_indexes(self):
-        print('Test model for ten columns participating')
-        self.__test_results(10)
 
     def __test_results(self, columns_participating):
 
@@ -160,10 +163,10 @@ class TestResults(TestCase):
         for elem in json_obj:
             sf_list = [1] * 17
             for subquery, included_col in zip(elem["subquery"], elem["cols"]):
-                subquery = subquery.replace('lineitems', table_name)
+                subquery = subquery.format(table_name)
                 sf_list[int(included_col)] = float(connector.query(subquery.format(table_name)).fetchone()[0]) / float(
                     total_amount_of_rows)
-            queries.append({'query': elem["query"].replace('lineitems', table_name), 'sf_array': sf_list})
+            queries.append({'query': elem["query"].format(table_name), 'sf_array': sf_list})
 
         sf_array = np.array([query["sf_array"] for query in queries])
         sf_array = [sum(i) for i in zip(*sf_array)]
