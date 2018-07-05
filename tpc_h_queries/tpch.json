@@ -17,5 +17,10 @@
    {"query" : "select column0 from {0} group by column0 having sum(column4) > 313",
    "subquery": ["select count (*) from {0}"],
       "cols": []
+	},
+   {"query" : "select * from {0} where column4 < column4",
+   "subquery": ["select * from {0} where column11 < column12"],
+      "cols": ["11","12"]
 	}
 ]
+
